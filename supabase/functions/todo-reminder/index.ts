@@ -76,6 +76,13 @@ Deno.serve(async (req) => {
         tag: 'no-todos-reminder',
         renotify: true,
       });
+    } else if (todos.filter(t => !t.completed).length === 0) {
+      payload = JSON.stringify({
+        title: '🎉 All Tasks Completed!',
+        body: `Amazing! You crushed all ${todos.length} tasks today. Keep it up!`,
+        tag: 'all-done',
+        renotify: true,
+      });
     } else {
       const todo = todos[Math.floor(Math.random() * todos.length)];
       payload = JSON.stringify({
