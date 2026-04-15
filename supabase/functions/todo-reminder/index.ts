@@ -8,8 +8,8 @@ const supabase = createClient(
 
 webpush.setVapidDetails(
   'mailto:admin@shahidkm.app',
-  Deno.env.get('VAPID_PUBLIC_KEY')!,
-  Deno.env.get('VAPID_PRIVATE_KEY')!
+  'BJEqnQujJR9XJqY-dVz27pr4JYaAZqqwIQ09g8nGq42pLUY7LXf36Yaffiu03xDmosmmSbhDgzc2Ufd6SomHysM',
+  'gpyl9SSTh11cudYfr5GQPNYKsn31tMFW_lGP_6HRr7k'
 );
 
 Deno.serve(async (req) => {
