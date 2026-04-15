@@ -23,9 +23,9 @@ export default function NotificationSetup() {
       if (result.success) {
         setEnabled(true);
       } else {
-        alert(result.error === 'Permission denied'
-          ? 'Please enable notifications in your browser/iPhone settings'
-          : `Failed: ${result.error}`
+        alert(result.error === 'Permission denied' 
+          ? 'Please enable notifications in your browser settings'
+          : 'Failed to enable notifications'
         );
       }
     }
