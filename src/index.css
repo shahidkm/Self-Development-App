@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+:root {
+  --accent: #22d3ee;
+  --accent-dim: rgba(34,211,238,0.15);
+  --accent-border: rgba(34,211,238,0.4);
+  --accent-glow: rgba(34,211,238,0.2);
+}
+
+@layer base {
+  body {
+    @apply bg-[#060913] text-gray-200 overflow-x-hidden;
+  }
+}
