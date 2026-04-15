@@ -8,8 +8,8 @@ const supabase = createClient(
 
 webpush.setVapidDetails(
   'mailto:admin@shahidkm.app',
-  'BI5SfwSIfZAuUam7m5220gPdBraO-xyfjE-UNp_JO0sNlYj_Hn9T5nDWF0kx8R0vDVe9kEcdqYO8_ROaq5nwKxM',
-  'HuZwTt5iBShPugJsiQGY41FB1kF5dTwyU7MAQK7gw0Y'
+  'BNrODkDt3H2J88zld58M2P1mTHwGbpPFOQxsD55rg8pihHNCqV5bXoBFKU-9BgPrcSbJQCHJZ-5cd9Pk8Hxq6KA',
+  '2x4MAnGU2IokfigacBlV6XyjhIYKENMJklHxEFI3wUQ'
 );
 
 Deno.serve(async (req) => {
