@@ -15,8 +15,13 @@
   * {
     box-sizing: border-box;
     min-width: 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
   }
   input, button, select, textarea {
-    font-size: 16px; /* prevents iOS zoom on focus */
+    font-size: 16px;
   }
 }
