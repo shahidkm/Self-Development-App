@@ -3,6 +3,8 @@
   "short_name": "To-Do",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["standalone"],
+  "id": "/",
   "background_color": "#020617",
   "theme_color": "#020617",
   "icons": [
