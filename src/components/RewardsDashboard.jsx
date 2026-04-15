@@ -250,15 +250,14 @@ export default function RewardsDashboard() {
           box-shadow: 0 0 15px rgba(14, 165, 233, 0.4);
         }
       `}</style>
-      <div className="max-w-7xl mx-auto py-8 px-4">
+      <div className="max-w-7xl mx-auto py-6 px-3 sm:px-4">
 
         {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center p-4 dash-glass rounded-2xl mb-4 text-amber-500 border border-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
             <Trophy size={42} strokeWidth={2} />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-100 via-white to-gray-400 mb-2 tracking-wide">
-            Achievement Vault
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-100 via-white to-gray-400 mb-2 tracking-wide">
           </h1>
           <p className="text-amber-500/60 font-mono text-sm tracking-widest uppercase">
             Unlock & Archive Milestones

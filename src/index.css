@@ -10,5 +10,13 @@
 @layer base {
   body {
     @apply bg-[#060913] text-gray-200 overflow-x-hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+  * {
+    box-sizing: border-box;
+    min-width: 0;
+  }
+  input, button, select, textarea {
+    font-size: 16px; /* prevents iOS zoom on focus */
   }
 }

@@ -93,12 +93,12 @@ export default function BossChallenge() {
         <div className="absolute bottom-[-10%] right-[-5%] w-[35%] h-[35%] rounded-full bg-red-900/20 blur-[120px]" />
       </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 py-10">
+      <div className="relative z-10 max-w-4xl mx-auto px-3 sm:px-4 py-8">
         <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-center mb-10">
           <div className="inline-flex items-center justify-center p-3 rounded-2xl mb-4 border border-rose-500/30" style={{ ...GLASS, boxShadow: '0 0 24px rgba(248,113,113,0.2)' }}>
             <Sword size={32} className="text-rose-400" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-rose-200 to-rose-500 mb-2">BOSS CHALLENGES</h1>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-rose-200 to-rose-500 mb-2">BOSS CHALLENGES</h1>
           <p className="text-rose-400/50 font-mono text-xs tracking-[0.3em] uppercase">Defeat Bosses · Earn Rewards · Prove Yourself</p>
         </motion.div>
 

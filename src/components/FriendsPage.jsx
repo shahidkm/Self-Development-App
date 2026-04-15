@@ -113,6 +113,7 @@ export default function FriendsPage() {
   });
 
   const MEET_GOALS = [
+    { value: "daily", label: "Daily", days: 1 },
     { value: "weekly", label: "Weekly", days: 7 },
     { value: "monthly", label: "Monthly", days: 30 },
     { value: "quarterly", label: "Quarterly", days: 90 },
@@ -557,7 +558,7 @@ export default function FriendsPage() {
                   <label className="block text-[10px] font-mono tracking-widest uppercase text-gray-400 mb-2">
                     Meet Frequency Goal
                   </label>
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {MEET_GOALS.map(g => (
                       <button key={g.value} type="button"
                         onClick={() => setForm({ ...form, meet_goal: g.value })}

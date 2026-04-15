@@ -345,7 +345,7 @@ export default function TodoList() {
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_10%,transparent_100%)]"></div>
       </div>
 
-      <div className="relative z-10 max-w-md mx-auto py-8 px-4">
+      <div className="relative z-10 max-w-2xl mx-auto py-6 px-3 sm:px-4">
         {/* Profile Card */}
         <div className="dark-glass neon-border rounded-3xl p-6 mb-8 animate-slideIn">
           <div className="relative z-10 flex flex-col items-center">
@@ -402,7 +402,7 @@ export default function TodoList() {
             </div>
 
             <div className="flex items-end justify-center gap-2 my-2 relative">
-              <span className="text-7xl font-light tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-gray-200 to-gray-500 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+              <span className="text-5xl sm:text-7xl font-light tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-gray-200 to-gray-500 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
                 {timeStr}
               </span>
               <div className="flex flex-col items-start pb-2">
@@ -485,7 +485,7 @@ export default function TodoList() {
             <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 text-indigo-400">
               <Sparkles size={20} />
             </div>
-            <h3 className="text-xl font-bold text-gray-100 tracking-wide">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-100 tracking-wide">
               Directives
             </h3>
           </div>
@@ -530,7 +530,7 @@ export default function TodoList() {
             </button>
           </div>
           {/* Priority + Due Time row */}
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-1.5 sm:gap-2 mt-2">
             {['high','medium','low'].map(p => (
               <button key={p} onClick={() => setNewPriority(p)}
                 className="flex-1 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider transition-all"

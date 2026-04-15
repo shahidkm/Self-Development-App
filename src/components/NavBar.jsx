@@ -355,7 +355,7 @@ export default function Navbar() {
             </div>
 
             {/* Notification Bell */}
-            <GlobalSearch onNavigate={go} />
+            {/* <GlobalSearch onNavigate={go} /> */}
             <NotificationSetup />
 
             {/* Hamburger */}
