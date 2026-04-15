@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const VAPID_PUBLIC_KEY = 'BJEqnQujJR9XJqY-dVz27pr4JYaAZqqwIQ09g8nGq42pLUY7LXf36Yaffiu03xDmosmmSbhDgzc2Ufd6SomHysM';
-const VAPID_PRIVATE_KEY = 'gpyl9SSTh11cudYfr5GQPNYKsn31tMFW_lGP_6HRr7k';
+const VAPID_PUBLIC_KEY = 'BI5SfwSIfZAuUam7m5220gPdBraO-xyfjE-UNp_JO0sNlYj_Hn9T5nDWF0kx8R0vDVe9kEcdqYO8_ROaq5nwKxM';
+const VAPID_PRIVATE_KEY = 'HuZwTt5iBShPugJsiQGY41FB1kF5dTwyU7MAQK7gw0Y';
 const VAPID_SUBJECT = 'mailto:admin@example.com';
 
 function base64urlToUint8Array(base64: string): Uint8Array {

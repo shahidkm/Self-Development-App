@@ -1,7 +1,7 @@
 import { supabase } from '../supabase';
 
 // Public VAPID key - you'll need to generate your own
-const VAPID_PUBLIC_KEY = 'BJEqnQujJR9XJqY-dVz27pr4JYaAZqqwIQ09g8nGq42pLUY7LXf36Yaffiu03xDmosmmSbhDgzc2Ufd6SomHysM';
+const VAPID_PUBLIC_KEY = 'BI5SfwSIfZAuUam7m5220gPdBraO-xyfjE-UNp_JO0sNlYj_Hn9T5nDWF0kx8R0vDVe9kEcdqYO8_ROaq5nwKxM';
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -18,11 +18,15 @@ export async function subscribeToPush() {
   const registration = await navigator.serviceWorker.ready;
   const existing = await registration.pushManager.getSubscription();
   if (existing) return existing;
-  
-  return registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-  });
+
+  try {
+    return await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+  } catch (err) {
+    throw new Error(`PushManager.subscribe failed: ${err.name} - ${err.message}`);
+  }
 }
 
 export async function enablePushNotifications() {
