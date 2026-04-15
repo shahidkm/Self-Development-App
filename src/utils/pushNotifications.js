@@ -26,20 +26,28 @@ export async function subscribeToPush() {
 }
 
 export async function enablePushNotifications() {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-    return { success: false, error: 'Not supported' };
+  if (!('Notification' in window)) {
+    return { success: false, error: 'DEBUG: Notification API not supported' };
+  }
+  if (!('serviceWorker' in navigator)) {
+    return { success: false, error: 'DEBUG: ServiceWorker not supported' };
+  }
+  if (!('PushManager' in window)) {
+    return { success: false, error: 'DEBUG: PushManager not supported' };
   }
 
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') {
-    return { success: false, error: 'Permission denied' };
+    return { success: false, error: `DEBUG: Permission = ${permission}` };
   }
 
   try {
-    await registerServiceWorker();
+    const reg = await registerServiceWorker();
+    if (!reg) return { success: false, error: 'DEBUG: SW registration failed' };
+
     const subscription = await subscribeToPush();
-    
-    // Store subscription in Supabase
+    if (!subscription) return { success: false, error: 'DEBUG: Subscription is null' };
+
     const { error } = await supabase
       .from('push_subscriptions')
       .upsert({
@@ -48,11 +56,10 @@ export async function enablePushNotifications() {
       }, { onConflict: 'endpoint' });
 
     if (error) throw error;
-    
+
     return { success: true };
   } catch (error) {
-    console.error('Push subscription failed:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: `DEBUG: ${error.message}` };
   }
 }
 
