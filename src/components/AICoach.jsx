@@ -4,7 +4,7 @@ import { Bot, Sparkles, Loader2, RefreshCw, ChevronDown, ChevronUp, Zap, Brain, 
 import Navbar from "./NavBar";
 import { supabase } from "../supabase";
 
-const GROQ_API_KEY = "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";
+const GROQ_API_KEY = "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";
 const TODAY = new Date().toISOString().split("T")[0];
 
 

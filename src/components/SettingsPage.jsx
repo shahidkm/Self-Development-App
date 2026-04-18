@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Lock, Palette, Save } from 'lucide-react';
+import { Settings, Lock, Palette, Save, Download, FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
 import Navbar from './NavBar';
 import { useTheme, THEMES } from '../ThemeContext';
+import { exportSummaryPDF, exportFinancePDF } from '../utils/exportData';
 
 const GLASS = { background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' };
 
@@ -18,6 +19,20 @@ export default function SettingsPage() {
   const { theme, changeTheme } = useTheme();
   const [timeout, setTimeout_] = useState(() => parseInt(localStorage.getItem('pin_timeout_minutes') || '15'));
   const [saved, setSaved]      = useState(false);
+  const [exporting, setExporting] = useState(null); // 'summary' | 'finance' | null
+
+  const handleExport = async (type) => {
+    setExporting(type);
+    try {
+      if (type === 'summary') await exportSummaryPDF();
+      else await exportFinancePDF();
+    } catch (e) {
+      console.error('Export failed:', e);
+      alert('Export failed: ' + e.message);
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const save = () => {
     localStorage.setItem('pin_timeout_minutes', timeout);
@@ -77,8 +92,39 @@ export default function SettingsPage() {
             <p className="text-xs text-slate-600 font-mono mt-2">App re-locks after {timeout} minute{timeout !== 1 ? 's' : ''} of inactivity.</p>
           </motion.div>
 
+          {/* Export Reports */}
+          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="rounded-3xl p-6" style={GLASS}>
+            <h2 className="text-sm font-mono uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+              <Download size={14} /> Export Reports
+            </h2>
+
+            {/* Summary Report */}
+            <div className="mb-3 p-4 rounded-2xl" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)' }}>
+              <p className="text-xs font-bold text-violet-300 mb-1">Summary Report</p>
+              <p className="text-[11px] text-slate-600 font-mono mb-3">Todos · Habits · Mood · Journal · Skills · Books · Plans · Achievements · Fears · Comfort Zone</p>
+              <button onClick={() => handleExport('summary')} disabled={!!exporting}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50"
+                style={{ background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.4)', color: '#a78bfa' }}>
+                {exporting === 'summary' ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+                {exporting === 'summary' ? 'Generating...' : 'Download Summary PDF'}
+              </button>
+            </div>
+
+            {/* Finance Report */}
+            <div className="p-4 rounded-2xl" style={{ background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.2)' }}>
+              <p className="text-xs font-bold text-emerald-300 mb-1">Finance Report</p>
+              <p className="text-[11px] text-slate-600 font-mono mb-3">P&L Summary · Month-by-Month · Category Ledger · Full Transaction Ledger · Shopping Plan</p>
+              <button onClick={() => handleExport('finance')} disabled={!!exporting}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50"
+                style={{ background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.4)', color: '#4ade80' }}>
+                {exporting === 'finance' ? <Loader2 size={14} className="animate-spin" /> : <FileSpreadsheet size={14} />}
+                {exporting === 'finance' ? 'Generating...' : 'Download Finance PDF'}
+              </button>
+            </div>
+          </motion.div>
+
           {/* Save */}
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
+          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.25 }}>
             <button onClick={save}
               className="w-full py-4 rounded-2xl font-bold text-sm uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
               style={saved
