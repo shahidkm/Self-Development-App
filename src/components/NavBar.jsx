@@ -8,7 +8,7 @@ import {
   Map, Sparkles, TrendingUp, ClipboardList, FolderOpen,
   Medal, Zap, Swords, Users, Wallet, Star, ScrollText,
   Brain, Activity, Trophy, ChevronDown, Menu, X,
-  GraduationCap, Gem, Clock, Heart, Images, Mic2, Shield, Bot, FileText,
+  GraduationCap, Gem, Clock, Heart, Images, Mic2, Shield, Bot, FileText, Briefcase,
   Search, Settings
 } from "lucide-react";
 
@@ -45,6 +45,7 @@ const NAV_GROUPS = [
       { label: "Plans",           path: "/plans",         Icon: Map },
       { label: "Inspirations",    path: "/inspirations",  Icon: Sparkles },
       { label: "Script Writer",   path: "/script-writer", Icon: FileText },
+      { label: "Job Finder",      path: "/job-finder",    Icon: Briefcase },
     ],
   },
   {

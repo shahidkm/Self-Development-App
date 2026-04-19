@@ -28,6 +28,8 @@ import AICoach from "./AICoach";
 import ScriptWriter from "./ScriptWriter";
 import SettingsPage from "./SettingsPage";
 
+import JobFinder from "./JobFinder";
+
 function RoutesConfig() {
     return (
         <Router>
@@ -59,6 +61,7 @@ function RoutesConfig() {
                 <Route path="/ai-coach" element={<AICoach />} />
                 <Route path="/script-writer" element={<ScriptWriter />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/job-finder" element={<JobFinder />} />
             </Routes>
         </Router>
     );
