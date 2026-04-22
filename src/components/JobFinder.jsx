@@ -10,6 +10,19 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs
 
 const JSEARCH_KEY = 'e97052a32amshadf58619b98d360p1aac85jsn8fcaa219a060';
 const GROQ_KEY = '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';
+const SUPABASE_URL = 'https://quufeiwzsgiuwkeyjjns.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dWZlaXd6c2dpdXdrZXlqam5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4ODQ5OTYsImV4cCI6MjA4MzQ2MDk5Nn0.KL0XNEg4o4RVMJOfAQdWQekug_sw2I0KNTLkj_73_sg';
+
+const sendPushNotification = async (title, body) => {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/job-apply-notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({ title, body, url: '/job-finder' }),
+    });
+    if (!res.ok) console.error('Push failed:', res.status, await res.text());
+  } catch (e) { console.error('Push error:', e.message); }
+};
 
 const GLASS = { background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' };
 
@@ -45,6 +58,10 @@ export default function JobFinder() {
   const [editingApp, setEditingApp] = useState(null);
   const [notes, setNotes] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [appSearch, setAppSearch] = useState('');
+  const [autoApplyingAll, setAutoApplyingAll] = useState(false);
+  const [autoApplyProgress, setAutoApplyProgress] = useState({ current: 0, total: 0, currentJob: '' });
+  const [useAiCoverLetter, setUseAiCoverLetter] = useState(false);
 
   // Profile state
   const [profile, setProfile] = useState(null);
@@ -115,7 +132,13 @@ export default function JobFinder() {
         headers: { 'x-rapidapi-key': JSEARCH_KEY, 'x-rapidapi-host': 'jsearch.p.rapidapi.com', 'Content-Type': 'application/json' },
       });
       const json = await res.json();
-      setJobs(json.data || []);
+      const seen = new Set();
+      const unique = (json.data || []).filter(j => {
+        const key = `${j.job_title}|${j.employer_name}`;
+        if (seen.has(key)) return false;
+        seen.add(key); return true;
+      });
+      setJobs(unique);
     } catch (e) {
       alert('Search failed: ' + e.message);
     }
@@ -220,7 +243,59 @@ Write a compelling 3-paragraph cover letter.`;
     await loadApplications();
   };
 
-  const filteredApps = filterStatus === 'all' ? applications : applications.filter(a => a.status === filterStatus);
+  const autoApplyAll = async () => {
+    if (!jobs.length) return;
+    setAutoApplyingAll(true);
+    setAutoApplyProgress({ current: 0, total: jobs.length });
+    let successCount = 0;
+    const errors = [];
+    for (let i = 0; i < jobs.length; i++) {
+      const job = jobs[i];
+      setAutoApplyProgress({ current: i + 1, total: jobs.length, currentJob: job.job_title });
+      try {
+        let cl = profile?.base_cover_letter || '';
+        if (useAiCoverLetter) {
+          try {
+            const prompt = `Write a short professional cover letter for:\nJob: ${job.job_title} at ${job.employer_name}\nDescription: ${(job.job_description || '').slice(0, 500)}\n${profile?.full_name ? `Applicant: ${profile.full_name}` : ''}\n${profile?.resume_text ? `Skills: ${profile.resume_text.slice(0, 300)}` : ''}\n3 paragraphs only.`;
+            cl = await callGroq(prompt);
+          } catch (groqErr) { cl = profile?.base_cover_letter || ''; }
+        }
+        const { error } = await supabase.from('job_applications').insert({
+          job_title: job.job_title,
+          company: job.employer_name,
+          location: `${job.job_city || ''} ${job.job_country || ''}`.trim(),
+          salary: job.job_min_salary ? `${job.job_min_salary} - ${job.job_max_salary} ${job.job_salary_currency || ''}` : null,
+          job_url: job.job_apply_link || job.job_google_link,
+          description: (job.job_description || '').slice(0, 1000),
+          status: 'applied',
+          applied_at: new Date().toISOString().split('T')[0],
+          cover_letter: cl || null,
+        });
+        if (error) throw error;
+        successCount++;
+        await sendPushNotification(`📨 Applied: ${job.job_title}`, `${job.employer_name} — ${i + 1}/${jobs.length} done`);
+        // Small delay to avoid rate limits
+        await new Promise(r => setTimeout(r, 500));
+      } catch (e) {
+        errors.push(`${job.job_title}: ${e.message}`);
+      }
+    }
+    await loadApplications();
+    setAutoApplyingAll(false);
+    setAutoApplyProgress({ current: 0, total: 0 });
+    if (successCount > 0) {
+      showLocalNotification('🚀 Auto Apply Complete!', `Saved ${successCount} jobs — check Applications tab!`);
+      sendPushNotification('🚀 Auto Apply Complete!', `Successfully applied to ${successCount}/${jobs.length} jobs!`);
+    }
+    const msg = `✅ Done! Saved ${successCount}/${jobs.length} jobs to Applications tab.${
+      errors.length ? `\n\n⚠️ ${errors.length} failed:\n${errors.slice(0, 3).join('\n')}` : ''
+    }`;
+    // alert(msg);
+  };
+
+  const filteredApps = applications
+    .filter(a => filterStatus === 'all' || a.status === filterStatus)
+    .filter(a => !appSearch.trim() || `${a.job_title} ${a.company}`.toLowerCase().includes(appSearch.toLowerCase()));
 
   const stats = {
     total: applications.length,
@@ -387,6 +462,44 @@ Write a compelling 3-paragraph cover letter.`;
               </div>
             </div>
 
+            {/* Auto Apply All Button */}
+            {jobs.length > 0 && (
+              <div className="mb-4 rounded-2xl p-4" style={GLASS}>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-bold text-slate-200">{jobs.length} jobs found</p>
+                  <button onClick={autoApplyAll} disabled={autoApplyingAll}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50"
+                    style={{ background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.4)', color: '#4ade80' }}>
+                    {autoApplyingAll ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                    {autoApplyingAll ? `Applying ${autoApplyProgress.current}/${autoApplyProgress.total}` : 'Auto Apply All'}
+                  </button>
+                </div>
+                {/* Cover Letter Mode Toggle */}
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/5">
+                  <span className="text-xs text-slate-500 font-mono uppercase tracking-widest">Cover Letter:</span>
+                  <div className="flex rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <button onClick={() => setUseAiCoverLetter(false)}
+                      className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition-all"
+                      style={!useAiCoverLetter
+                        ? { background: 'rgba(99,102,241,0.25)', color: '#818cf8' }
+                        : { background: 'transparent', color: '#475569' }}>
+                      Base
+                    </button>
+                    <button onClick={() => setUseAiCoverLetter(true)}
+                      className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-1"
+                      style={useAiCoverLetter
+                        ? { background: 'rgba(245,158,11,0.2)', color: '#f59e0b' }
+                        : { background: 'transparent', color: '#475569' }}>
+                      <Sparkles size={11} />AI Generated
+                    </button>
+                  </div>
+                  <span className="text-[10px] text-slate-600">
+                    {useAiCoverLetter ? 'Unique AI letter per job (slower)' : 'Your base cover letter (faster)'}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Job Results */}
             <div className="space-y-4">
               {jobs.map(job => (
@@ -487,10 +600,41 @@ Write a compelling 3-paragraph cover letter.`;
           </div>
         )}
 
+        {/* Auto Apply All Overlay */}
+        {autoApplyingAll && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(2,6,23,0.92)', backdropFilter: 'blur(12px)' }}>
+            <div className="rounded-3xl p-8 text-center max-w-sm w-full mx-4" style={GLASS}>
+              <div className="relative w-20 h-20 mx-auto mb-6">
+                <div className="absolute inset-0 rounded-full animate-ping" style={{ background: 'rgba(74,222,128,0.2)' }} />
+                <div className="absolute inset-2 rounded-full animate-pulse" style={{ background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.4)' }} />
+                <div className="absolute inset-0 flex items-center justify-center text-3xl">🚀</div>
+              </div>
+              <h2 className="text-xl font-black text-white mb-1">Auto Applying...</h2>
+              <p className="text-[10px] font-mono mb-1" style={{ color: useAiCoverLetter ? '#f59e0b' : '#818cf8' }}>
+                {useAiCoverLetter ? '✨ AI Cover Letter per job' : '📄 Base Cover Letter'}
+              </p>
+              <p className="text-xs text-slate-400 mb-1 truncate px-4">{autoApplyProgress.currentJob}</p>
+              <p className="text-emerald-400 font-mono text-sm mb-5">{autoApplyProgress.current} / {autoApplyProgress.total}</p>
+              <div className="w-full rounded-full overflow-hidden mb-2" style={{ height: 6, background: 'rgba(255,255,255,0.06)' }}>
+                <div className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${(autoApplyProgress.current / autoApplyProgress.total) * 100}%`, background: 'linear-gradient(90deg, #4ade80, #22d3ee)' }} />
+              </div>
+              <p className="text-[10px] text-slate-600 font-mono">{Math.round((autoApplyProgress.current / autoApplyProgress.total) * 100)}% complete</p>
+            </div>
+          </div>
+        )}
+
         {/* Tracker Tab */}
         {tab === 'tracker' && (
           <div>
-            {/* Filter */}
+            {/* Search + Filter */}
+            <div className="relative mb-4">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input value={appSearch} onChange={e => setAppSearch(e.target.value)}
+                placeholder="Search applications by title or company..."
+                className="w-full pl-9 pr-4 py-3 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none"
+                style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(255,255,255,0.1)' }} />
+            </div>
             <div className="flex gap-2 flex-wrap mb-6">
               {['all', ...Object.keys(STATUS_COLORS)].map(s => (
                 <button key={s} onClick={() => setFilterStatus(s)}
