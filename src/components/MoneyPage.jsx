@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { PieChart as PieChartIcon, BarChart3, TrendingUp, TrendingDown, IndianRupee, Search, Filter, Plus, PlusCircle, CheckCircle2, Edit2, Trash2, X, ShoppingCart, Check } from "lucide-react";
+import { PieChart as PieChartIcon, BarChart3, TrendingUp, TrendingDown, IndianRupee, Search, Filter, Plus, PlusCircle, CheckCircle2, Edit2, Trash2, X, ShoppingCart, Check, AlertCircle, Minus, ArrowUp } from "lucide-react";
 import Navbar from "./NavBar";
 import CloudinaryUpload from "./CloudinaryUpload";
 import Chart from "react-apexcharts";
@@ -20,10 +20,18 @@ export default function MoneyPage() {
     const [activeTab, setActiveTab] = useState("transactions");
     const [shoppingPlans, setShoppingPlans] = useState([]);
     const [completedPlans, setCompletedPlans] = useState([]);
-    const [shopForm, setShopForm] = useState({ name: "", amount: "", image_url: "" });
+    const [shopForm, setShopForm] = useState({ name: "", amount: "", image_url: "", priority: "medium" });
     const [shopLoading, setShopLoading] = useState(false);
     const [editingShopId, setEditingShopId] = useState(null);
-    const [editShopForm, setEditShopForm] = useState({ name: "", amount: "", image_url: "" });
+    const [editShopForm, setEditShopForm] = useState({ name: "", amount: "", image_url: "", priority: "medium" });
+    const [shopSearch, setShopSearch] = useState("");
+
+    const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+    const priorityConfig = {
+        high:   { label: "High",   color: "text-rose-400",   border: "border-rose-500/40",   bg: "bg-rose-500/10",   icon: <ArrowUp size={11} /> },
+        medium: { label: "Medium", color: "text-yellow-400", border: "border-yellow-500/40", bg: "bg-yellow-500/10", icon: <Minus size={11} /> },
+        low:    { label: "Low",    color: "text-slate-400",  border: "border-slate-500/40",  bg: "bg-slate-500/10",  icon: <AlertCircle size={11} /> },
+    };
     const [showCompleted, setShowCompleted] = useState(false);
     const [categories, setCategories] = useState([]);
     const [newCategoryInput, setNewCategoryInput] = useState("");
@@ -94,8 +102,9 @@ export default function MoneyPage() {
             name: shopForm.name.trim(),
             amount: Number(shopForm.amount),
             image_url: shopForm.image_url.trim() || null,
+            priority: shopForm.priority,
         });
-        setShopForm({ name: "", amount: "", image_url: "" });
+        setShopForm({ name: "", amount: "", image_url: "", priority: "medium" });
         await fetchShoppingPlans();
         setShopLoading(false);
     }
@@ -108,6 +117,7 @@ export default function MoneyPage() {
             name: editShopForm.name.trim(),
             amount: Number(editShopForm.amount),
             image_url: editShopForm.image_url.trim() || null,
+            priority: editShopForm.priority,
         }).eq("id", editingShopId);
         setEditingShopId(null);
         await fetchShoppingPlans();
@@ -804,6 +814,19 @@ export default function MoneyPage() {
                                     />
                                 </div>
                                 <div>
+                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400 mb-2 block">Priority</label>
+                                    <select
+                                        className="dash-input w-full px-4 py-3 rounded-xl appearance-none"
+                                        value={shopForm.priority}
+                                        onChange={(e) => setShopForm({ ...shopForm, priority: e.target.value })}
+                                        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.5em 1.5em' }}
+                                    >
+                                        <option value="high" className="bg-gray-900">🔴 High</option>
+                                        <option value="medium" className="bg-gray-900">🟡 Medium</option>
+                                        <option value="low" className="bg-gray-900">⚪ Low</option>
+                                    </select>
+                                </div>
+                                <div className="md:col-span-3">
                                     <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400 mb-2 block">Item Image</label>
                                     <CloudinaryUpload
                                         label="Upload Image"
@@ -821,15 +844,27 @@ export default function MoneyPage() {
                             </form>
                         </div>
 
-                        {/* Total bar */}
-                        {shoppingPlans.length > 0 && (
-                            <div className="dash-glass rounded-2xl px-6 py-4 mb-4 flex items-center justify-between">
-                                <span className="text-xs font-mono tracking-widest uppercase text-gray-400">{shoppingPlans.length} item{shoppingPlans.length !== 1 ? 's' : ''} planned</span>
-                                <span className="font-mono font-bold text-violet-300 text-lg">
-                                    Total ₹{shoppingPlans.reduce((s, i) => s + Number(i.amount), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
+                        {/* Search + Total bar */}
+                        <div className="dash-glass rounded-2xl px-6 py-4 mb-4 flex flex-col md:flex-row md:items-center gap-3">
+                            <div className="relative flex-1">
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                                <input
+                                    type="text"
+                                    placeholder="Search items..."
+                                    className="dash-input w-full pl-9 pr-4 py-2 rounded-xl text-sm placeholder-gray-600"
+                                    value={shopSearch}
+                                    onChange={(e) => setShopSearch(e.target.value)}
+                                />
                             </div>
-                        )}
+                            {shoppingPlans.length > 0 && (
+                                <div className="flex items-center justify-between md:justify-end gap-4 shrink-0">
+                                    <span className="text-xs font-mono tracking-widest uppercase text-gray-400">{shoppingPlans.length} item{shoppingPlans.length !== 1 ? 's' : ''}</span>
+                                    <span className="font-mono font-bold text-violet-300 text-lg">
+                                        Total ₹{shoppingPlans.reduce((s, i) => s + Number(i.amount), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
 
                         {shoppingPlans.length === 0 ? (
                             <div className="text-center py-16 dash-glass rounded-3xl">
@@ -844,11 +879,14 @@ export default function MoneyPage() {
                                     <div className="col-span-4 text-center">Actions</div>
                                 </div>
                                 <div className="divide-y divide-white/5">
-                                    {shoppingPlans.map((item) => (
+                                    {[...shoppingPlans]
+                                        .filter(i => i.name.toLowerCase().includes(shopSearch.toLowerCase()))
+                                        .sort((a, b) => PRIORITY_ORDER[a.priority || 'medium'] - PRIORITY_ORDER[b.priority || 'medium'])
+                                        .map((item) => (
                                         <div key={item.id}>
                                             {editingShopId === item.id ? (
                                                 <form onSubmit={saveEditShopItem} className="p-4 grid md:grid-cols-12 md:gap-4 md:items-center bg-violet-500/5">
-                                                    <div className="col-span-4 mb-2 md:mb-0">
+                                                    <div className="col-span-3 mb-2 md:mb-0">
                                                         <input
                                                             type="text"
                                                             className="dash-input w-full px-3 py-2 rounded-lg text-sm"
@@ -867,8 +905,19 @@ export default function MoneyPage() {
                                                         />
                                                     </div>
                                                     <div className="col-span-2 mb-2 md:mb-0">
+                                                        <select
+                                                            className="dash-input w-full px-3 py-2 rounded-lg text-sm appearance-none"
+                                                            value={editShopForm.priority}
+                                                            onChange={(e) => setEditShopForm({ ...editShopForm, priority: e.target.value })}
+                                                        >
+                                                            <option value="high" className="bg-gray-900">🔴 High</option>
+                                                            <option value="medium" className="bg-gray-900">🟡 Medium</option>
+                                                            <option value="low" className="bg-gray-900">⚪ Low</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="col-span-1 mb-2 md:mb-0">
                                                         <CloudinaryUpload
-                                                            label="Upload"
+                                                            label="Img"
                                                             currentUrl={editShopForm.image_url}
                                                             onUpload={(url) => setEditShopForm(f => ({ ...f, image_url: url }))}
                                                         />
@@ -894,14 +943,23 @@ export default function MoneyPage() {
                                                         ) : (
                                                             <ShoppingCart size={16} className="text-violet-400 shrink-0" />
                                                         )}
-                                                        <span className="text-white font-medium">{item.name}</span>
+                                                        <div>
+                                                            <span className="text-white font-medium">{item.name}</span>
+                                                            <div className="mt-0.5">
+                                                                {(() => { const p = priorityConfig[item.priority || 'medium']; return (
+                                                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono tracking-widest uppercase border ${p.bg} ${p.border} ${p.color}`}>
+                                                                        {p.icon}{p.label}
+                                                                    </span>
+                                                                ); })()}
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                     <div className="col-span-3 text-right font-mono font-bold text-violet-300 mb-2 md:mb-0">
                                                         ₹{Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </div>
                                                     <div className="col-span-4 flex gap-2 justify-center mt-3 md:mt-0">
                                                         <button
-                                                            onClick={() => { setEditingShopId(item.id); setEditShopForm({ name: item.name, amount: item.amount, image_url: item.image_url || "" }); }}
+                                                            onClick={() => { setEditingShopId(item.id); setEditShopForm({ name: item.name, amount: item.amount, image_url: item.image_url || "", priority: item.priority || "medium" }); }}
                                                             disabled={shopLoading}
                                                             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 text-xs font-mono tracking-widest uppercase hover:bg-cyan-500/20 transition-all disabled:opacity-50"
                                                         >
