@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { PieChart as PieChartIcon, BarChart3, TrendingUp, TrendingDown, IndianRupee, Search, Filter, Plus, PlusCircle, CheckCircle2, Edit2, Trash2, X, ShoppingCart, Check } from "lucide-react";
+import { PieChart as PieChartIcon, BarChart3, TrendingUp, TrendingDown, IndianRupee, Search, Filter, Plus, PlusCircle, CheckCircle2, Edit2, Trash2, X, ShoppingCart, Check, ImageIcon } from "lucide-react";
 import Navbar from "./NavBar";
 import Chart from "react-apexcharts";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,10 +19,10 @@ export default function MoneyPage() {
     const [activeTab, setActiveTab] = useState("transactions");
     const [shoppingPlans, setShoppingPlans] = useState([]);
     const [completedPlans, setCompletedPlans] = useState([]);
-    const [shopForm, setShopForm] = useState({ name: "", amount: "" });
+    const [shopForm, setShopForm] = useState({ name: "", amount: "", image_url: "" });
     const [shopLoading, setShopLoading] = useState(false);
     const [editingShopId, setEditingShopId] = useState(null);
-    const [editShopForm, setEditShopForm] = useState({ name: "", amount: "" });
+    const [editShopForm, setEditShopForm] = useState({ name: "", amount: "", image_url: "" });
     const [showCompleted, setShowCompleted] = useState(false);
     const [categories, setCategories] = useState([]);
     const [newCategoryInput, setNewCategoryInput] = useState("");
@@ -92,8 +92,9 @@ export default function MoneyPage() {
         await supabase.from("shopping_plans").insert({
             name: shopForm.name.trim(),
             amount: Number(shopForm.amount),
+            image_url: shopForm.image_url.trim() || null,
         });
-        setShopForm({ name: "", amount: "" });
+        setShopForm({ name: "", amount: "", image_url: "" });
         await fetchShoppingPlans();
         setShopLoading(false);
     }
@@ -105,6 +106,7 @@ export default function MoneyPage() {
         await supabase.from("shopping_plans").update({
             name: editShopForm.name.trim(),
             amount: Number(editShopForm.amount),
+            image_url: editShopForm.image_url.trim() || null,
         }).eq("id", editingShopId);
         setEditingShopId(null);
         await fetchShoppingPlans();
@@ -800,7 +802,17 @@ export default function MoneyPage() {
                                         required
                                     />
                                 </div>
-                                <div className="flex items-end">
+                                <div>
+                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400 mb-2 flex items-center gap-1"><ImageIcon size={10} /> Image URL</label>
+                                    <input
+                                        type="url"
+                                        placeholder="https://..."
+                                        className="dash-input w-full px-4 py-3 rounded-xl placeholder-gray-600"
+                                        value={shopForm.image_url}
+                                        onChange={(e) => setShopForm({ ...shopForm, image_url: e.target.value })}
+                                    />
+                                </div>
+                                <div className="flex items-end md:col-start-3">
                                     <button type="submit" disabled={shopLoading}
                                         className="w-full py-3 bg-gradient-to-r from-violet-500/80 to-purple-600/80 hover:from-violet-500 hover:to-purple-600 text-white rounded-xl text-xs font-semibold tracking-widest uppercase border border-violet-500/50 transition-all disabled:opacity-50"
                                     >
@@ -837,7 +849,7 @@ export default function MoneyPage() {
                                         <div key={item.id}>
                                             {editingShopId === item.id ? (
                                                 <form onSubmit={saveEditShopItem} className="p-4 grid md:grid-cols-12 md:gap-4 md:items-center bg-violet-500/5">
-                                                    <div className="col-span-5 mb-2 md:mb-0">
+                                                    <div className="col-span-4 mb-2 md:mb-0">
                                                         <input
                                                             type="text"
                                                             className="dash-input w-full px-3 py-2 rounded-lg text-sm"
@@ -846,13 +858,22 @@ export default function MoneyPage() {
                                                             required autoFocus
                                                         />
                                                     </div>
-                                                    <div className="col-span-3 mb-2 md:mb-0">
+                                                    <div className="col-span-2 mb-2 md:mb-0">
                                                         <input
                                                             type="number" min="0" step="0.01"
                                                             className="dash-input w-full px-3 py-2 rounded-lg text-sm text-right"
                                                             value={editShopForm.amount}
                                                             onChange={(e) => setEditShopForm({ ...editShopForm, amount: e.target.value })}
                                                             required
+                                                        />
+                                                    </div>
+                                                    <div className="col-span-2 mb-2 md:mb-0">
+                                                        <input
+                                                            type="url"
+                                                            placeholder="Image URL"
+                                                            className="dash-input w-full px-3 py-2 rounded-lg text-sm"
+                                                            value={editShopForm.image_url}
+                                                            onChange={(e) => setEditShopForm({ ...editShopForm, image_url: e.target.value })}
                                                         />
                                                     </div>
                                                     <div className="col-span-4 flex gap-2 justify-center">
@@ -871,7 +892,11 @@ export default function MoneyPage() {
                                             ) : (
                                                 <div className="p-4 md:grid md:grid-cols-12 md:gap-4 md:items-center hover:bg-white/[0.02] transition-colors group">
                                                     <div className="col-span-5 flex items-center gap-3 mb-2 md:mb-0">
-                                                        <ShoppingCart size={16} className="text-violet-400 shrink-0" />
+                                                        {item.image_url ? (
+                                                            <img src={item.image_url} alt={item.name} className="w-10 h-10 rounded-lg object-cover shrink-0 border border-violet-500/30" onError={(e) => { e.target.style.display='none'; }} />
+                                                        ) : (
+                                                            <ShoppingCart size={16} className="text-violet-400 shrink-0" />
+                                                        )}
                                                         <span className="text-white font-medium">{item.name}</span>
                                                     </div>
                                                     <div className="col-span-3 text-right font-mono font-bold text-violet-300 mb-2 md:mb-0">
@@ -879,7 +904,7 @@ export default function MoneyPage() {
                                                     </div>
                                                     <div className="col-span-4 flex gap-2 justify-center mt-3 md:mt-0">
                                                         <button
-                                                            onClick={() => { setEditingShopId(item.id); setEditShopForm({ name: item.name, amount: item.amount }); }}
+                                                            onClick={() => { setEditingShopId(item.id); setEditShopForm({ name: item.name, amount: item.amount, image_url: item.image_url || "" }); }}
                                                             disabled={shopLoading}
                                                             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 text-xs font-mono tracking-widest uppercase hover:bg-cyan-500/20 transition-all disabled:opacity-50"
                                                         >
