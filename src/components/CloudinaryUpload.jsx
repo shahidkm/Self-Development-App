@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Upload, Loader2, X, ImagePlus, FileText } from "lucide-react";
 
 const CLOUD_NAME = "dk8wc11kq";
@@ -8,6 +8,10 @@ export default function CloudinaryUpload({ onUpload, currentUrl, label = "Upload
     const [uploading, setUploading] = useState(false);
     const [preview, setPreview] = useState(currentUrl || null);
     const fileRef = useRef();
+
+    useEffect(() => {
+        setPreview(currentUrl || null);
+    }, [currentUrl]);
 
     async function handleFile(e) {
         const file = e.target.files[0];

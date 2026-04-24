@@ -20,10 +20,13 @@ export default function MoneyPage() {
     const [activeTab, setActiveTab] = useState("transactions");
     const [shoppingPlans, setShoppingPlans] = useState([]);
     const [completedPlans, setCompletedPlans] = useState([]);
-    const [shopForm, setShopForm] = useState({ name: "", amount: "", image_url: "", priority: "medium" });
+    const [shopForm, setShopForm] = useState({ name: "", amount: "", image_url: "", priority: "medium", quantity: "", unit: "nos" });
     const [shopLoading, setShopLoading] = useState(false);
     const [editingShopId, setEditingShopId] = useState(null);
-    const [editShopForm, setEditShopForm] = useState({ name: "", amount: "", image_url: "", priority: "medium" });
+    const [editShopForm, setEditShopForm] = useState({ name: "", amount: "", image_url: "", priority: "medium", quantity: "", unit: "nos" });
+    const [lightboxImg, setLightboxImg] = useState(null);
+
+    const UNITS = ["nos", "kg", "g", "ltr", "ml", "pcs", "pack", "box", "dozen", "pair", "m", "cm"];
     const [shopSearch, setShopSearch] = useState("");
 
     const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
@@ -103,8 +106,10 @@ export default function MoneyPage() {
             amount: Number(shopForm.amount),
             image_url: shopForm.image_url.trim() || null,
             priority: shopForm.priority,
+            quantity: shopForm.quantity ? Number(shopForm.quantity) : null,
+            unit: shopForm.unit || "nos",
         });
-        setShopForm({ name: "", amount: "", image_url: "", priority: "medium" });
+        setShopForm({ name: "", amount: "", image_url: "", priority: "medium", quantity: "", unit: "nos" });
         await fetchShoppingPlans();
         setShopLoading(false);
     }
@@ -118,6 +123,8 @@ export default function MoneyPage() {
             amount: Number(editShopForm.amount),
             image_url: editShopForm.image_url.trim() || null,
             priority: editShopForm.priority,
+            quantity: editShopForm.quantity ? Number(editShopForm.quantity) : null,
+            unit: editShopForm.unit || "nos",
         }).eq("id", editingShopId);
         setEditingShopId(null);
         await fetchShoppingPlans();
@@ -826,6 +833,26 @@ export default function MoneyPage() {
                                         <option value="low" className="bg-gray-900">⚪ Low</option>
                                     </select>
                                 </div>
+                                <div>
+                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400 mb-2 block">Quantity</label>
+                                    <input
+                                        type="number" min="0" step="0.01" placeholder="e.g. 2"
+                                        className="dash-input w-full px-4 py-3 rounded-xl placeholder-gray-600"
+                                        value={shopForm.quantity}
+                                        onChange={(e) => setShopForm({ ...shopForm, quantity: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400 mb-2 block">Unit</label>
+                                    <select
+                                        className="dash-input w-full px-4 py-3 rounded-xl appearance-none"
+                                        value={shopForm.unit}
+                                        onChange={(e) => setShopForm({ ...shopForm, unit: e.target.value })}
+                                        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.5em 1.5em' }}
+                                    >
+                                        {UNITS.map(u => <option key={u} value={u} className="bg-gray-900">{u}</option>)}
+                                    </select>
+                                </div>
                                 <div className="md:col-span-3">
                                     <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400 mb-2 block">Item Image</label>
                                     <CloudinaryUpload
@@ -886,23 +913,41 @@ export default function MoneyPage() {
                                         <div key={item.id}>
                                             {editingShopId === item.id ? (
                                                 <form onSubmit={saveEditShopItem} className="p-4 grid md:grid-cols-12 md:gap-4 md:items-center bg-violet-500/5">
-                                                    <div className="col-span-3 mb-2 md:mb-0">
+                                                    <div className="col-span-2 mb-2 md:mb-0">
                                                         <input
                                                             type="text"
                                                             className="dash-input w-full px-3 py-2 rounded-lg text-sm"
                                                             value={editShopForm.name}
                                                             onChange={(e) => setEditShopForm({ ...editShopForm, name: e.target.value })}
-                                                            required autoFocus
+                                                            required autoFocus placeholder="Name"
                                                         />
                                                     </div>
                                                     <div className="col-span-2 mb-2 md:mb-0">
                                                         <input
                                                             type="number" min="0" step="0.01"
-                                                            className="dash-input w-full px-3 py-2 rounded-lg text-sm text-right"
+                                                            className="dash-input w-full px-3 py-2 rounded-lg text-sm"
                                                             value={editShopForm.amount}
                                                             onChange={(e) => setEditShopForm({ ...editShopForm, amount: e.target.value })}
-                                                            required
+                                                            required placeholder="₹"
                                                         />
+                                                    </div>
+                                                    <div className="col-span-1 mb-2 md:mb-0">
+                                                        <input
+                                                            type="number" min="0" step="0.01"
+                                                            className="dash-input w-full px-3 py-2 rounded-lg text-sm"
+                                                            value={editShopForm.quantity}
+                                                            onChange={(e) => setEditShopForm({ ...editShopForm, quantity: e.target.value })}
+                                                            placeholder="Qty"
+                                                        />
+                                                    </div>
+                                                    <div className="col-span-1 mb-2 md:mb-0">
+                                                        <select
+                                                            className="dash-input w-full px-2 py-2 rounded-lg text-sm appearance-none"
+                                                            value={editShopForm.unit}
+                                                            onChange={(e) => setEditShopForm({ ...editShopForm, unit: e.target.value })}
+                                                        >
+                                                            {UNITS.map(u => <option key={u} value={u} className="bg-gray-900">{u}</option>)}
+                                                        </select>
                                                     </div>
                                                     <div className="col-span-2 mb-2 md:mb-0">
                                                         <select
@@ -922,7 +967,7 @@ export default function MoneyPage() {
                                                             onUpload={(url) => setEditShopForm(f => ({ ...f, image_url: url }))}
                                                         />
                                                     </div>
-                                                    <div className="col-span-4 flex gap-2 justify-center">
+                                                    <div className="col-span-3 flex gap-2 justify-center">
                                                         <button type="submit" disabled={shopLoading}
                                                             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-violet-500/20 text-violet-300 border border-violet-500/40 text-xs font-mono tracking-widest uppercase hover:bg-violet-500/30 transition-all disabled:opacity-50"
                                                         >
@@ -939,18 +984,28 @@ export default function MoneyPage() {
                                                 <div className="p-4 md:grid md:grid-cols-12 md:gap-4 md:items-center hover:bg-white/[0.02] transition-colors group">
                                                     <div className="col-span-5 flex items-center gap-3 mb-2 md:mb-0">
                                                         {item.image_url ? (
-                                                            <img src={item.image_url} alt={item.name} className="w-10 h-10 rounded-lg object-cover shrink-0 border border-violet-500/30" onError={(e) => { e.target.style.display='none'; }} />
+                                                            <img
+                                                                src={item.image_url} alt={item.name}
+                                                                className="w-10 h-10 rounded-lg object-cover shrink-0 border border-violet-500/30 cursor-pointer hover:border-violet-400 hover:scale-105 transition-all"
+                                                                onClick={() => setLightboxImg(item.image_url)}
+                                                                onError={(e) => { e.target.style.display='none'; }}
+                                                            />
                                                         ) : (
                                                             <ShoppingCart size={16} className="text-violet-400 shrink-0" />
                                                         )}
                                                         <div>
                                                             <span className="text-white font-medium">{item.name}</span>
-                                                            <div className="mt-0.5">
+                                                            <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
                                                                 {(() => { const p = priorityConfig[item.priority || 'medium']; return (
                                                                     <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono tracking-widest uppercase border ${p.bg} ${p.border} ${p.color}`}>
                                                                         {p.icon}{p.label}
                                                                     </span>
                                                                 ); })()}
+                                                                {item.quantity && (
+                                                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono tracking-widest uppercase border bg-violet-500/10 border-violet-500/30 text-violet-300">
+                                                                        {item.quantity} {item.unit || 'nos'}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -959,7 +1014,7 @@ export default function MoneyPage() {
                                                     </div>
                                                     <div className="col-span-4 flex gap-2 justify-center mt-3 md:mt-0">
                                                         <button
-                                                            onClick={() => { setEditingShopId(item.id); setEditShopForm({ name: item.name, amount: item.amount, image_url: item.image_url || "", priority: item.priority || "medium" }); }}
+                                                            onClick={() => { setEditingShopId(item.id); setEditShopForm({ name: item.name, amount: item.amount, image_url: item.image_url || "", priority: item.priority || "medium", quantity: item.quantity || "", unit: item.unit || "nos" }); }}
                                                             disabled={shopLoading}
                                                             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 text-xs font-mono tracking-widest uppercase hover:bg-cyan-500/20 transition-all disabled:opacity-50"
                                                         >
@@ -1024,6 +1079,29 @@ export default function MoneyPage() {
                     </motion.div>
                 )}
             </div>
+
+            {/* Image Lightbox */}
+            {lightboxImg && (
+                <div
+                    className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
+                    style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
+                    onClick={() => setLightboxImg(null)}
+                >
+                    <div className="relative max-w-2xl w-full" onClick={e => e.stopPropagation()}>
+                        <button
+                            onClick={() => setLightboxImg(null)}
+                            className="absolute -top-3 -right-3 z-10 p-1.5 rounded-full bg-gray-900 border border-white/20 text-gray-400 hover:text-white transition-colors"
+                        >
+                            <X size={16} />
+                        </button>
+                        <img
+                            src={lightboxImg}
+                            alt="Product"
+                            className="w-full max-h-[80vh] object-contain rounded-2xl border border-violet-500/30 shadow-[0_0_40px_rgba(139,92,246,0.3)]"
+                        />
+                    </div>
+                </div>
+            )}
         </motion.div>
     );
 }
