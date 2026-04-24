@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import RoutesConfig from './components/Routes';
 import PinLock from './components/PinLock';
+import M2HCountdownModal from './components/M2HCountdownModal';
 
 function App() {
   const [unlocked, setUnlocked] = useState(() => {
@@ -18,6 +19,7 @@ function App() {
 
   return (
     <div className="App">
+      <M2HCountdownModal />
       <RoutesConfig />
     </div>
   );
