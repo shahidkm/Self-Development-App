@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { PieChart as PieChartIcon, BarChart3, TrendingUp, TrendingDown, IndianRupee, Search, Filter, Plus, PlusCircle, CheckCircle2, Edit2, Trash2, X, ShoppingCart, Check, ImageIcon } from "lucide-react";
+import { PieChart as PieChartIcon, BarChart3, TrendingUp, TrendingDown, IndianRupee, Search, Filter, Plus, PlusCircle, CheckCircle2, Edit2, Trash2, X, ShoppingCart, Check } from "lucide-react";
 import Navbar from "./NavBar";
+import CloudinaryUpload from "./CloudinaryUpload";
 import Chart from "react-apexcharts";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -803,13 +804,11 @@ export default function MoneyPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400 mb-2 flex items-center gap-1"><ImageIcon size={10} /> Image URL</label>
-                                    <input
-                                        type="url"
-                                        placeholder="https://..."
-                                        className="dash-input w-full px-4 py-3 rounded-xl placeholder-gray-600"
-                                        value={shopForm.image_url}
-                                        onChange={(e) => setShopForm({ ...shopForm, image_url: e.target.value })}
+                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400 mb-2 block">Item Image</label>
+                                    <CloudinaryUpload
+                                        label="Upload Image"
+                                        currentUrl={shopForm.image_url}
+                                        onUpload={(url) => setShopForm(f => ({ ...f, image_url: url }))}
                                     />
                                 </div>
                                 <div className="flex items-end md:col-start-3">
@@ -868,12 +867,10 @@ export default function MoneyPage() {
                                                         />
                                                     </div>
                                                     <div className="col-span-2 mb-2 md:mb-0">
-                                                        <input
-                                                            type="url"
-                                                            placeholder="Image URL"
-                                                            className="dash-input w-full px-3 py-2 rounded-lg text-sm"
-                                                            value={editShopForm.image_url}
-                                                            onChange={(e) => setEditShopForm({ ...editShopForm, image_url: e.target.value })}
+                                                        <CloudinaryUpload
+                                                            label="Upload"
+                                                            currentUrl={editShopForm.image_url}
+                                                            onUpload={(url) => setEditShopForm(f => ({ ...f, image_url: url }))}
                                                         />
                                                     </div>
                                                     <div className="col-span-4 flex gap-2 justify-center">
