@@ -140,6 +140,7 @@ export default function MoneyPage() {
             type: "expense",
             category: "Shopping",
             date: new Date().toISOString().split('T')[0],
+            shopping_plan_id: item.id,
         });
         await fetchShoppingPlans();
         await fetchTransactions();
@@ -340,14 +341,19 @@ export default function MoneyPage() {
         if (!window.confirm("Are you sure you want to scrub this record?")) return;
 
         setLoading(true);
-        const { error } = await supabase
+        const { data: txn } = await supabase
             .from("money_transactions")
-            .delete()
-            .eq("id", id);
+            .select("shopping_plan_id")
+            .eq("id", id)
+            .single();
 
-        if (error) {
-            console.error(error);
+        await supabase.from("money_transactions").delete().eq("id", id);
+
+        if (txn?.shopping_plan_id) {
+            await supabase.from("shopping_plans").update({ completed: false }).eq("id", txn.shopping_plan_id);
+            await fetchShoppingPlans();
         }
+
         await fetchTransactions();
     }
 
