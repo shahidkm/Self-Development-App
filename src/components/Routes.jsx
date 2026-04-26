@@ -29,6 +29,7 @@ import ScriptWriter from "./ScriptWriter";
 import SettingsPage from "./SettingsPage";
 
 import JobFinder from "./JobFinder";
+import WorkoutDiet from "./WorkoutDiet";
 
 function RoutesConfig() {
     return (
@@ -62,6 +63,7 @@ function RoutesConfig() {
                 <Route path="/script-writer" element={<ScriptWriter />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/job-finder" element={<JobFinder />} />
+                <Route path="/workout-diet" element={<WorkoutDiet />} />
             </Routes>
         </Router>
     );
