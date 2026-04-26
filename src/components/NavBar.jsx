@@ -9,7 +9,7 @@ import {
   Medal, Zap, Swords, Users, Wallet, Star, ScrollText,
   Brain, Activity, Trophy, ChevronDown, Menu, X,
   GraduationCap, Gem, Clock, Heart, Images, Mic2, Shield, Bot, FileText, Briefcase,
-  Search, Settings
+  Search, Settings, Utensils
 } from "lucide-react";
 
 // ─── All nav groups with every route ──────────────────────────────────────
@@ -33,6 +33,7 @@ const NAV_GROUPS = [
       { label: "Pomodoro",      path: "/pomodoro",  Icon: Timer },
       { label: "Manners",       path: "/manners",   Icon: Heart },
       { label: "Gallery",       path: "/gallery",   Icon: Images },
+      { label: "Workout Diet",  path: "/workout-diet", Icon: Utensils },
     ],
   },
   {
