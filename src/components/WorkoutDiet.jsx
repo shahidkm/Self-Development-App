@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dumbbell, Sun, Coffee, Utensils, Apple, Moon, Droplets, BedDouble,
-  TrendingUp, ChevronDown, ChevronUp, Check, LayoutList, Clock, Scale, Plus } from 'lucide-react';
+  TrendingUp, ChevronDown, ChevronUp, Check, LayoutList, Clock, Scale, Plus, Eye, Timer } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import Navbar from './NavBar';
 import { supabase } from '../supabase';
@@ -326,8 +326,213 @@ function WeightTracker({ bodyWeight }) {
   );
 }
 
+// ── Eye Health Data ────────────────────────────────────────────────────────
+const EYE_HABITS = [
+  { id: 'rule_20_20_20', emoji: '🖥️', color: '#22d3ee', title: '20-20-20 Rule',
+    desc: 'Every 20 min → look 20 feet away for 20 sec. Most important habit to slow power increase.',
+    tips: ["Keep phone/laptop at arm's distance", "Don't use phone in dark rooms", 'Reduce brightness at night'] },
+  { id: 'lighting', emoji: '💡', color: '#facc15', title: 'Proper Lighting',
+    desc: 'Study/work in a well-lit room. Avoid glare directly into eyes.',
+    tips: ["Don't sit too close to screens or TV", 'No screen use in pitch dark'] },
+  { id: 'glasses', emoji: '👓', color: '#818cf8', title: 'Wear Glasses Correctly',
+    desc: 'If prescribed, wear them when needed — driving, classes, screens.',
+    tips: ['Not wearing them causes eye strain and headaches'] },
+  { id: 'diet', emoji: '🥕', color: '#fb923c', title: 'Eat for Eye Support',
+    desc: 'Include daily: carrot, spinach/moringa, eggs, fish, almonds, walnuts, banana, orange.',
+    tips: ['These support eye health and reduce stress damage'] },
+  { id: 'sleep', emoji: '😴', color: '#4ade80', title: 'Sleep 7–8 Hours',
+    desc: 'Poor sleep = more blur + eye fatigue.',
+    tips: ['Minimum 7–8 hours every night'] },
+  { id: 'relaxation', emoji: '🌿', color: '#34d399', title: 'Eye Relaxation',
+    desc: 'Palming: warm hands over closed eyes. Focus change: near → far object.',
+    tips: ['Helps reduce strain and comfort eyes'] },
+  { id: 'outdoor', emoji: '🏃', color: '#a78bfa', title: 'Outdoor Time',
+    desc: 'Spend 30–60 mins outside daily.',
+    tips: ['Proven to help slow worsening, especially for myopia'] },
+];
+
+const EYE_AVOID = [
+  'Using phone lying down for long time',
+  'Constant scrolling without breaks',
+  'Believing "7-day eyesight cure" tricks',
+];
+
+// ── 20-20-20 Timer ─────────────────────────────────────────────────────────
+function EyeTimer() {
+  const [running, setRunning] = useState(false);
+  const [phase, setPhase] = useState('work');
+  const [secs, setSecs] = useState(20 * 60);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (running) {
+      ref.current = setInterval(() => {
+        setSecs(s => {
+          if (s <= 1) {
+            setPhase(p => {
+              const next = p === 'work' ? 'break' : 'work';
+              setSecs(next === 'work' ? 20 * 60 : 20);
+              return next;
+            });
+            return s;
+          }
+          return s - 1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(ref.current);
+    }
+    return () => clearInterval(ref.current);
+  }, [running]);
+
+  const reset = () => { setRunning(false); setPhase('work'); setSecs(20 * 60); };
+  const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+  const ss = String(secs % 60).padStart(2, '0');
+  const total = phase === 'work' ? 20 * 60 : 20;
+  const pct = ((total - secs) / total) * 100;
+  const color = phase === 'work' ? '#22d3ee' : '#4ade80';
+
+  return (
+    <div className="rounded-2xl p-5 mb-5" style={{ ...GLASS, borderColor: color + '30' }}>
+      <div className="flex items-center gap-2 mb-4">
+        <Timer size={15} style={{ color }} />
+        <p className="font-mono text-xs tracking-[0.2em] uppercase text-slate-400">20-20-20 Timer</p>
+        <span className="ml-auto text-[10px] font-mono px-2 py-0.5 rounded-full"
+          style={{ background: color + '15', color, border: `1px solid ${color}30` }}>
+          {phase === 'work' ? '🖥️ Screen Time' : '👀 Look Away!'}
+        </span>
+      </div>
+      <div className="flex flex-col items-center mb-4">
+        <div className="relative w-28 h-28">
+          <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+            <circle cx="50" cy="50" r="44" fill="none" stroke={color} strokeWidth="8"
+              strokeDasharray={`${2 * Math.PI * 44}`}
+              strokeDashoffset={`${2 * Math.PI * 44 * (1 - pct / 100)}`}
+              strokeLinecap="round"
+              style={{ transition: 'stroke-dashoffset 1s linear', filter: `drop-shadow(0 0 6px ${color})` }} />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-2xl font-black font-mono" style={{ color }}>{mm}:{ss}</span>
+            <span className="text-[9px] font-mono text-slate-500 uppercase">{phase === 'work' ? 'until break' : 'look away'}</span>
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={() => setRunning(r => !r)}
+          className="flex-1 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider transition-all"
+          style={{ background: color + '18', border: `1px solid ${color}40`, color }}>
+          {running ? '⏸ Pause' : '▶ Start'}
+        </button>
+        <button onClick={reset} className="px-4 py-2.5 rounded-xl text-slate-500 text-sm"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>↺</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Eye Health Tab ──────────────────────────────────────────────────────────
+function EyeHealthTab() {
+  const [checked, setChecked] = useState({});
+  const [logId, setLogId] = useState(null);
+
+  useEffect(() => { loadLog(); }, []);
+
+  const loadLog = async () => {
+    const { data } = await supabase.from('eye_health_logs')
+      .select('*').eq('date', TODAY).maybeSingle();
+    if (data) { setChecked(data.habits || {}); setLogId(data.id); }
+  };
+
+  const toggle = async (id) => {
+    const next = { ...checked, [id]: !checked[id] };
+    setChecked(next);
+    if (logId) {
+      await supabase.from('eye_health_logs').update({ habits: next }).eq('id', logId);
+    } else {
+      const { data } = await supabase.from('eye_health_logs')
+        .insert({ date: TODAY, habits: next }).select().single();
+      setLogId(data?.id);
+    }
+  };
+
+  const done = Object.values(checked).filter(Boolean).length;
+
+  return (
+    <div>
+      <div className="rounded-2xl p-4 mb-5" style={GLASS}>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-mono text-slate-500 uppercase tracking-wider">Today's Eye Habits</p>
+          <p className="text-xs font-bold" style={{ color: done === EYE_HABITS.length ? '#4ade80' : '#22d3ee' }}>
+            {done} / {EYE_HABITS.length} done
+          </p>
+        </div>
+        <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+          <div className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${(done / EYE_HABITS.length) * 100}%`,
+              background: done === EYE_HABITS.length ? 'linear-gradient(90deg,#4ade80,#22d3ee)' : 'linear-gradient(90deg,#22d3ee,#818cf8)' }} />
+        </div>
+        {done === EYE_HABITS.length && (
+          <p className="text-[11px] font-mono text-green-400 text-center mt-2">👁️ Perfect eye care day!</p>
+        )}
+      </div>
+
+      <EyeTimer />
+
+      <div className="space-y-3 mb-5">
+        {EYE_HABITS.map(h => (
+          <div key={h.id} className="rounded-2xl p-4 transition-all"
+            style={{ ...GLASS, borderColor: checked[h.id] ? h.color + '40' : h.color + '15',
+              background: checked[h.id] ? h.color + '06' : GLASS.background }}>
+            <div className="flex items-start gap-3">
+              <button onClick={() => toggle(h.id)}
+                className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
+                style={{ background: checked[h.id] ? h.color + '25' : 'rgba(255,255,255,0.04)',
+                  border: `2px solid ${checked[h.id] ? h.color : 'rgba(255,255,255,0.1)'}`,
+                  boxShadow: checked[h.id] ? `0 0 10px ${h.color}40` : 'none' }}>
+                {checked[h.id] && <Check size={12} style={{ color: h.color }} />}
+              </button>
+              <div className="flex-1">
+                <p className={`font-bold text-sm mb-1 ${checked[h.id] ? 'line-through opacity-50' : 'text-slate-200'}`}>
+                  {h.emoji} {h.title}
+                </p>
+                <p className="text-xs text-slate-400 mb-2">{h.desc}</p>
+                <div className="flex flex-col gap-1">
+                  {h.tips.map((t, i) => (
+                    <span key={i} className="text-[11px] font-mono text-slate-500 flex items-start gap-1">
+                      <span style={{ color: h.color }}>›</span> {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-2xl p-4 mb-5" style={{ ...GLASS, borderColor: '#f8717120' }}>
+        <p className="text-xs font-mono uppercase tracking-widest text-rose-400 mb-3">❌ Avoid These</p>
+        <div className="space-y-2">
+          {EYE_AVOID.map((a, i) => (
+            <div key={i} className="flex items-start gap-2 text-sm text-slate-400">
+              <span className="text-rose-500 mt-0.5">✕</span> {a}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-2xl p-4" style={{ ...GLASS, borderColor: '#4ade8020' }}>
+        <p className="text-xs font-mono uppercase tracking-widest text-emerald-400 mb-2">🧠 Bottom Line</p>
+        <p className="text-sm text-slate-400">You can keep your power stable for years if you follow these.</p>
+        <p className="text-sm text-slate-400 mt-1">Small habits daily &gt; big changes occasionally.</p>
+      </div>
+    </div>
+  );
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────
 export default function WorkoutDiet() {
+  const [tab, setTab] = useState('diet'); // 'diet' | 'eye'
   const [isWorkoutDay, setIsWorkoutDay] = useState(true);
   const [view, setView] = useState('cards'); // 'cards' | 'timeline'
   const [bodyWeight, setBodyWeight] = useState(() => parseFloat(localStorage.getItem('wd_bodyweight') || '0'));
@@ -379,6 +584,25 @@ export default function WorkoutDiet() {
           <p className="text-green-400/50 font-mono text-xs tracking-[0.3em] uppercase">Lean Bulk · Clean Fuel · Real Gains</p>
         </div>
 
+        {/* Tab switcher */}
+        <div className="flex rounded-2xl overflow-hidden mb-6" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+          {[
+            { val: 'diet', icon: Dumbbell, label: 'Diet & Workout', color: '#4ade80' },
+            { val: 'eye',  icon: Eye,      label: 'Eye Health',     color: '#22d3ee' },
+          ].map(t => (
+            <button key={t.val} onClick={() => setTab(t.val)}
+              className="flex-1 py-3 text-xs font-bold font-mono tracking-wider flex items-center justify-center gap-2 transition-all"
+              style={{
+                background: tab === t.val ? t.color + '15' : 'transparent',
+                color: tab === t.val ? t.color : '#475569',
+                borderRight: t.val === 'diet' ? '1px solid rgba(255,255,255,0.06)' : 'none',
+              }}>
+              <t.icon size={14} /> {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'eye' ? <EyeHealthTab /> : (<>
         {/* Protein Calculator */}
         <div className="rounded-2xl p-4 mb-4" style={GLASS}>
           <div className="flex items-center gap-2 mb-3">
@@ -493,6 +717,7 @@ export default function WorkoutDiet() {
             ❌ No junk · No fried foods · No excess sugar
           </p>
         </div>
+        </>)}
 
       </div>
     </div>

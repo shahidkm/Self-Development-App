@@ -270,6 +270,7 @@ export default function Navbar() {
 
   return (
     <>
+      <div style={{ height: 62 }} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap');
         @keyframes ddFadeIn {
@@ -308,7 +309,7 @@ export default function Navbar() {
         @media (min-width: 1025px) { .nb-mob-btn{display:none!important} }
       `}</style>
 
-      <div style={{ fontFamily: "'Rajdhani',sans-serif", position: "relative", zIndex: 1000 }}>
+      <div style={{ fontFamily: "'Rajdhani',sans-serif", position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000 }}>
         {/* Bar */}
         <div className="nb-scan" style={{
           background: "rgba(4,7,18,0.92)", borderBottom: "1px solid rgba(255,255,255,0.07)",
