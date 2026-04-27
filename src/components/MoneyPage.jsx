@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { PieChart as PieChartIcon, BarChart3, TrendingUp, TrendingDown, IndianRupee, Search, Filter, Plus, PlusCircle, CheckCircle2, Edit2, Trash2, X, ShoppingCart, Check, AlertCircle, Minus, ArrowUp } from "lucide-react";
+import { PieChart as PieChartIcon, BarChart3, TrendingUp, TrendingDown, IndianRupee, Search, Filter, Plus, PlusCircle, CheckCircle2, Edit2, Trash2, X, ShoppingCart, Check, AlertCircle, Minus, ArrowUp, Wallet, Percent } from "lucide-react";
 import Navbar from "./NavBar";
 import CloudinaryUpload from "./CloudinaryUpload";
 import Chart from "react-apexcharts";
@@ -36,6 +36,11 @@ export default function MoneyPage() {
         low:    { label: "Low",    color: "text-slate-400",  border: "border-slate-500/40",  bg: "bg-slate-500/10",  icon: <AlertCircle size={11} /> },
     };
     const [showCompleted, setShowCompleted] = useState(false);
+    const [txSearch, setTxSearch] = useState("");
+    const [budgetIncome, setBudgetIncome] = useState("");
+    const [budgetLedgers, setBudgetLedgers] = useState([{ name: "", percent: "" }]);
+    const [budgetSaved, setBudgetSaved] = useState(null);
+    const [budgetLoading, setBudgetLoading] = useState(false);
     const [categories, setCategories] = useState([]);
     const [newCategoryInput, setNewCategoryInput] = useState("");
     const [showNewCategory, setShowNewCategory] = useState(false);
@@ -71,7 +76,24 @@ export default function MoneyPage() {
         fetchTransactions();
         fetchShoppingPlans();
         fetchCategories();
+        fetchBudgetPlan();
     }, []);
+
+    async function fetchBudgetPlan() {
+        const { data } = await supabase.from("budget_plan").select("*").order("created_at", { ascending: false }).limit(1);
+        if (data && data[0]) setBudgetSaved({ income: data[0].income, ledgers: data[0].ledgers });
+    }
+
+    async function saveBudgetPlan(e) {
+        e.preventDefault();
+        const ledgers = budgetLedgers.filter(l => l.name.trim() && l.percent);
+        if (!budgetIncome || ledgers.length === 0) return;
+        setBudgetLoading(true);
+        await supabase.from("budget_plan").delete().neq("id", 0);
+        await supabase.from("budget_plan").insert({ income: Number(budgetIncome), ledgers });
+        await fetchBudgetPlan();
+        setBudgetLoading(false);
+    }
 
     async function fetchCategories() {
         const { data } = await supabase.from("categories").select("name").order("name");
@@ -396,7 +418,7 @@ export default function MoneyPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
                 {/* Tab Switcher */}
-                <div className="flex gap-2 mb-8 dash-glass p-1 rounded-xl w-fit">
+                <div className="flex gap-2 mb-8 dash-glass p-1 rounded-xl w-fit flex-wrap">
                     <button
                         onClick={() => setActiveTab("transactions")}
                         className={`px-5 py-2 rounded-lg text-xs font-mono tracking-widest uppercase transition-all ${
@@ -416,6 +438,16 @@ export default function MoneyPage() {
                         }`}
                     >
                         <span className="flex items-center gap-2"><ShoppingCart size={13} /> Shopping Plan</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("budget")}
+                        className={`px-5 py-2 rounded-lg text-xs font-mono tracking-widest uppercase transition-all ${
+                            activeTab === "budget"
+                                ? "bg-gradient-to-r from-amber-500/30 to-orange-500/30 text-amber-300 border border-amber-500/30"
+                                : "text-gray-500 hover:text-gray-300"
+                        }`}
+                    >
+                        <span className="flex items-center gap-2"><Wallet size={13} /> Budget Plan</span>
                     </button>
                 </div>
 
@@ -689,10 +721,22 @@ export default function MoneyPage() {
                 </motion.div>
 
                 {/* Transactions List */}
-                <h3 className="text-xl font-bold text-gray-200 mb-6 flex items-center gap-2">
-                    <Filter size={20} className="text-cyan-400" />
-                    Ledger History
-                </h3>
+                <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
+                    <h3 className="text-xl font-bold text-gray-200 flex items-center gap-2">
+                        <Filter size={20} className="text-cyan-400" />
+                        Ledger History
+                    </h3>
+                    <div className="relative flex-1 max-w-sm">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                        <input
+                            type="text"
+                            placeholder="Search transactions..."
+                            className="dash-input w-full pl-9 pr-4 py-2 rounded-xl text-sm placeholder-gray-600"
+                            value={txSearch}
+                            onChange={(e) => setTxSearch(e.target.value)}
+                        />
+                    </div>
+                </div>
                 {
                     loading ? (
                         <div className="flex justify-center py-20">
@@ -727,7 +771,11 @@ export default function MoneyPage() {
                             </div>
 
                             <div className="divide-y divide-white/5">
-                                {transactions.map((t) => (
+                                {transactions.filter(t =>
+                                    !txSearch ||
+                                    t.title.toLowerCase().includes(txSearch.toLowerCase()) ||
+                                    (t.category || "").toLowerCase().includes(txSearch.toLowerCase())
+                                ).map((t) => (
                                     <div key={t.id} className="p-4 md:grid md:grid-cols-12 md:gap-4 md:items-center hover:bg-white/[0.02] transition-colors group">
                                         <div className="hidden md:flex col-span-1 justify-center">
                                             {getTypeIcon(t.type)}
@@ -785,6 +833,124 @@ export default function MoneyPage() {
                 }
                 </>
                 }
+
+                {activeTab === "budget" && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
+                        <div className="text-center mb-10">
+                            <div className="inline-flex items-center justify-center p-4 dash-glass rounded-2xl mb-4 text-amber-400 border border-amber-500/30 shadow-[0_0_20px_rgba(251,191,36,0.2)]">
+                                <Wallet size={42} strokeWidth={2} />
+                            </div>
+                            <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-100 via-white to-gray-400 mb-2 tracking-wide">Budget Plan</h1>
+                            <p className="text-amber-400/60 font-mono text-sm tracking-widest uppercase">Split Income Into Ledgers</p>
+                        </div>
+
+                        {budgetSaved && (
+                            <div className="dash-glass rounded-2xl p-6 mb-8">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-mono tracking-widest uppercase text-amber-400">Active Budget Plan</h3>
+                                    <span className="text-xs font-mono text-gray-400">Total Income: <span className="text-emerald-400 font-bold">₹{Number(budgetSaved.income).toLocaleString()}</span></span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {budgetSaved.ledgers.map((l, i) => {
+                                        const allocated = (Number(budgetSaved.income) * Number(l.percent)) / 100;
+                                        return (
+                                            <div key={i} className="dash-glass rounded-xl p-4 border border-amber-500/10">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="text-white font-medium text-sm">{l.name}</span>
+                                                    <span className="text-amber-400 font-mono text-xs">{l.percent}%</span>
+                                                </div>
+                                                <div className="text-2xl font-bold text-amber-300 font-mono">₹{allocated.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                                                <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                                                    <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${Math.min(l.percent, 100)}%` }} />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                {(() => {
+                                    const total = budgetSaved.ledgers.reduce((s, l) => s + Number(l.percent), 0);
+                                    return total !== 100
+                                        ? <p className="mt-3 text-xs font-mono text-rose-400">⚠ Ledgers sum to {total}% (should be 100%)</p>
+                                        : <p className="mt-3 text-xs font-mono text-emerald-400">✓ 100% allocated</p>;
+                                })()}
+                            </div>
+                        )}
+
+                        <div className="dash-glass rounded-3xl p-6 md:p-8 relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-amber-500/0 via-amber-500 to-amber-500/0 opacity-50"></div>
+                            <h2 className="text-xl font-bold text-gray-200 mb-6 flex items-center gap-3 pb-4 border-b border-white/5">
+                                <Percent className="text-amber-400" size={22} />
+                                {budgetSaved ? "Update Budget Plan" : "Create Budget Plan"}
+                            </h2>
+                            <form onSubmit={saveBudgetPlan} className="space-y-6">
+                                <div>
+                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400 mb-2 block">Total Monthly Income (₹) *</label>
+                                    <input
+                                        type="number" min="0" step="0.01" placeholder="e.g. 50000"
+                                        className="dash-input w-full md:w-64 px-4 py-3 rounded-xl placeholder-gray-600"
+                                        value={budgetIncome}
+                                        onChange={(e) => setBudgetIncome(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">Ledgers (must total 100%)</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setBudgetLedgers(l => [...l, { name: "", percent: "" }])}
+                                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-mono tracking-widest uppercase hover:bg-amber-500/20 transition-all"
+                                        >
+                                            <Plus size={12} /> Add Ledger
+                                        </button>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {budgetLedgers.map((l, i) => (
+                                            <div key={i} className="flex gap-2 items-center">
+                                                <input
+                                                    type="text" placeholder="Ledger name (e.g. Savings)"
+                                                    className="dash-input flex-1 px-4 py-2.5 rounded-xl placeholder-gray-600 text-sm"
+                                                    value={l.name}
+                                                    onChange={(e) => setBudgetLedgers(ls => ls.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
+                                                />
+                                                <div className="relative w-28">
+                                                    <input
+                                                        type="number" min="0" max="100" step="0.1" placeholder="%"
+                                                        className="dash-input w-full px-4 py-2.5 rounded-xl placeholder-gray-600 text-sm pr-7"
+                                                        value={l.percent}
+                                                        onChange={(e) => setBudgetLedgers(ls => ls.map((x, j) => j === i ? { ...x, percent: e.target.value } : x))}
+                                                    />
+                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">%</span>
+                                                </div>
+                                                {budgetLedgers.length > 1 && (
+                                                    <button type="button" onClick={() => setBudgetLedgers(ls => ls.filter((_, j) => j !== i))}
+                                                        className="p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {budgetLedgers.some(l => l.percent) && (() => {
+                                        const total = budgetLedgers.reduce((s, l) => s + (Number(l.percent) || 0), 0);
+                                        return (
+                                            <p className={`mt-2 text-xs font-mono ${total === 100 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                                Total: {total}% {total === 100 ? '✓' : `(${100 - total > 0 ? `${(100 - total).toFixed(1)}% remaining` : `${(total - 100).toFixed(1)}% over`})`}
+                                            </p>
+                                        );
+                                    })()}
+                                </div>
+                                <button
+                                    type="submit" disabled={budgetLoading}
+                                    className="px-8 py-3 bg-gradient-to-r from-amber-500/80 to-orange-600/80 hover:from-amber-500 hover:to-orange-600 text-white rounded-xl text-xs font-semibold tracking-widest uppercase border border-amber-500/50 transition-all disabled:opacity-50"
+                                >
+                                    {budgetLoading ? "Saving..." : "Save Budget Plan"}
+                                </button>
+                            </form>
+                        </div>
+                    </motion.div>
+                )}
 
                 {activeTab === "shopping" && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
