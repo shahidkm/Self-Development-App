@@ -41,6 +41,9 @@ export default function MoneyPage() {
     const [budgetLedgers, setBudgetLedgers] = useState([{ name: "", percent: "" }]);
     const [budgetSaved, setBudgetSaved] = useState(null);
     const [budgetLoading, setBudgetLoading] = useState(false);
+    const [budgetDraft, setBudgetDraft] = useState(() => {
+        try { return JSON.parse(localStorage.getItem("budget_draft")) || null; } catch { return null; }
+    });
     const [categories, setCategories] = useState([]);
     const [newCategoryInput, setNewCategoryInput] = useState("");
     const [showNewCategory, setShowNewCategory] = useState(false);
@@ -91,8 +94,29 @@ export default function MoneyPage() {
         setBudgetLoading(true);
         await supabase.from("budget_plan").delete().neq("id", 0);
         await supabase.from("budget_plan").insert({ income: Number(budgetIncome), ledgers });
+        localStorage.removeItem("budget_draft");
+        setBudgetDraft(null);
         await fetchBudgetPlan();
         setBudgetLoading(false);
+    }
+
+    function saveBudgetDraft() {
+        const ledgers = budgetLedgers.filter(l => l.name.trim() || l.percent);
+        if (!budgetIncome && ledgers.length === 0) return;
+        const draft = { income: budgetIncome, ledgers: budgetLedgers };
+        localStorage.setItem("budget_draft", JSON.stringify(draft));
+        setBudgetDraft(draft);
+    }
+
+    function loadBudgetDraft() {
+        if (!budgetDraft) return;
+        setBudgetIncome(budgetDraft.income || "");
+        setBudgetLedgers(budgetDraft.ledgers?.length ? budgetDraft.ledgers : [{ name: "", percent: "" }]);
+    }
+
+    function clearBudgetDraft() {
+        localStorage.removeItem("budget_draft");
+        setBudgetDraft(null);
     }
 
     async function fetchCategories() {
@@ -844,6 +868,33 @@ export default function MoneyPage() {
                             <p className="text-amber-400/60 font-mono text-sm tracking-widest uppercase">Split Income Into Ledgers</p>
                         </div>
 
+                        {budgetDraft && (
+                            <div className="dash-glass rounded-2xl p-4 mb-6 border border-slate-500/30 flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-mono tracking-widest uppercase bg-slate-500/20 border border-slate-500/40 text-slate-300">Draft</span>
+                                    <span className="text-sm text-slate-300">
+                                        Income: <span className="text-amber-400 font-mono font-bold">₹{Number(budgetDraft.income || 0).toLocaleString()}</span>
+                                        <span className="text-slate-500 mx-2">·</span>
+                                        {budgetDraft.ledgers?.filter(l => l.name).length || 0} ledger{(budgetDraft.ledgers?.filter(l => l.name).length || 0) !== 1 ? 's' : ''}
+                                    </span>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={loadBudgetDraft}
+                                        className="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-mono tracking-widest uppercase hover:bg-amber-500/20 transition-all"
+                                    >
+                                        Load Draft
+                                    </button>
+                                    <button
+                                        onClick={clearBudgetDraft}
+                                        className="px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono tracking-widest uppercase hover:bg-rose-500/20 transition-all"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {budgetSaved && (
                             <div className="dash-glass rounded-2xl p-6 mb-8">
                                 <div className="flex items-center justify-between mb-4">
@@ -941,12 +992,21 @@ export default function MoneyPage() {
                                         );
                                     })()}
                                 </div>
-                                <button
-                                    type="submit" disabled={budgetLoading}
-                                    className="px-8 py-3 bg-gradient-to-r from-amber-500/80 to-orange-600/80 hover:from-amber-500 hover:to-orange-600 text-white rounded-xl text-xs font-semibold tracking-widest uppercase border border-amber-500/50 transition-all disabled:opacity-50"
-                                >
-                                    {budgetLoading ? "Saving..." : "Save Budget Plan"}
-                                </button>
+                                <div className="flex flex-wrap gap-3 items-center">
+                                    <button
+                                        type="submit" disabled={budgetLoading}
+                                        className="px-8 py-3 bg-gradient-to-r from-amber-500/80 to-orange-600/80 hover:from-amber-500 hover:to-orange-600 text-white rounded-xl text-xs font-semibold tracking-widest uppercase border border-amber-500/50 transition-all disabled:opacity-50"
+                                    >
+                                        {budgetLoading ? "Saving..." : "Save Budget Plan"}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={saveBudgetDraft}
+                                        className="px-6 py-3 bg-slate-700/60 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold tracking-widest uppercase border border-slate-500/40 transition-all"
+                                    >
+                                        Save as Draft
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </motion.div>
