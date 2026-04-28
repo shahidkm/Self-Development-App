@@ -29,64 +29,64 @@ const MEAL_HOURS = {
 const MEALS_ALL = [
   {
     time: 'Pre-Workout',
-    subtitle: '20–30 mins before',
+    subtitle: '🌅 Cheap energy boost',
     icon: Sun,
     color: '#facc15',
-    items: ['1 banana', 'Black coffee (optional)'],
-    tip: 'Quick energy without heaviness',
+    items: ['1 banana 🍌', 'Black tea / coffee (optional)'],
+    tip: "Don't go empty stomach — this alone improves your strength",
     workoutOnly: true,
   },
   {
-    time: 'Post-Workout Breakfast',
-    subtitle: 'Most important meal',
+    time: 'Post-Workout',
+    subtitle: '🏋️ Most important meal',
     icon: Dumbbell,
     color: '#4ade80',
-    items: ['4 whole eggs (or 3 whole + 2 whites)', '2–3 chapati  OR  3 idli / 1 dosa', '1 fruit (banana or apple)'],
-    tip: 'This meal drives muscle growth',
+    items: ['3 boiled eggs 🥚', '2 slices bread  OR  1 banana'],
+    tip: 'This is your muscle-building base',
     workoutOnly: true,
   },
   {
-    time: 'Mid-Morning',
-    subtitle: '~10–11 AM',
+    time: 'Breakfast',
+    subtitle: '🍛 Simple + cheap + carbs',
     icon: Coffee,
     color: '#fb923c',
-    items: ['Handful of peanuts / almonds', 'Buttermilk or coconut water'],
-    tip: 'Light fuel to stay sharp',
+    items: ['3 idli + sambar', 'OR  2 dosa + chutney', 'OR  Oats (with water or little milk)'],
+    tip: 'Simple + cheap + enough carbs',
     workoutOnly: false,
   },
   {
     time: 'Lunch',
-    subtitle: 'Big balanced meal',
+    subtitle: '🍗 Big balanced meal',
     icon: Utensils,
     color: '#22d3ee',
-    items: ['Rice (normal portion)', 'Chicken / fish (150–200g)  OR  paneer / dal', 'Vegetables', 'Curd'],
-    tip: 'Biggest meal of the day',
+    items: ['Rice 🍚 + any curry', '2 eggs 🥚  OR  Small fish 🐟  OR  Soya chunks', 'Vegetables + little curd'],
+    tip: 'Soya chunks = best cheap protein option',
     workoutOnly: false,
   },
   {
     time: 'Evening Snack',
-    subtitle: '~4–5 PM',
+    subtitle: '☕ ~4–5 PM',
     icon: Apple,
     color: '#e879f9',
-    items: ['2 boiled eggs', 'OR  Peanut butter sandwich', 'OR  Boiled chana'],
-    tip: 'Pick one — keep it protein-rich',
+    items: ['Roasted peanuts 🥜 (handful)', 'OR  Kadala (boiled chickpeas)'],
+    tip: 'Cheap protein + keeps you full',
     workoutOnly: false,
   },
   {
     time: 'Dinner',
-    subtitle: 'Clean + protein-focused',
+    subtitle: '🌙 Light + protein focused',
     icon: Moon,
     color: '#818cf8',
-    items: ['2 chapati', 'Chicken / fish / paneer / dal', 'Vegetables'],
+    items: ['2 chapati', 'Egg curry / soya chunks / small chicken portion', 'Vegetables'],
     tip: 'Keep lighter than lunch',
     workoutOnly: false,
   },
   {
-    time: 'Before Bed',
-    subtitle: 'Recovery fuel',
+    time: 'Before Sleep',
+    subtitle: '🛌 Recovery fuel',
     icon: BedDouble,
     color: '#f472b6',
-    items: ['1 glass of milk'],
+    items: ['1 glass milk 🥛 (if affordable)'],
     tip: 'Slow protein for overnight recovery',
     workoutOnly: false,
   },
@@ -100,13 +100,13 @@ const RULES = [
 ];
 
 const TIMELINE_TIMES = [
-  { time: 'Pre-Workout',           label: '6:00 AM' },
-  { time: 'Post-Workout Breakfast',label: '8:00 AM' },
-  { time: 'Mid-Morning',           label: '10:30 AM' },
-  { time: 'Lunch',                 label: '1:00 PM' },
-  { time: 'Evening Snack',         label: '4:30 PM' },
-  { time: 'Dinner',                label: '8:00 PM' },
-  { time: 'Before Bed',            label: '10:00 PM' },
+  { time: 'Pre-Workout',  label: '6:00 AM' },
+  { time: 'Post-Workout', label: '8:00 AM' },
+  { time: 'Breakfast',    label: '9:00 AM' },
+  { time: 'Lunch',        label: '1:00 PM' },
+  { time: 'Evening Snack',label: '4:30 PM' },
+  { time: 'Dinner',       label: '8:00 PM' },
+  { time: 'Before Sleep', label: '10:00 PM' },
 ];
 
 function getCurrentMeal() {
@@ -579,9 +579,9 @@ export default function WorkoutDiet() {
             <Dumbbell size={32} className="text-green-400" />
           </div>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-green-200 to-cyan-400 mb-2">
-            WORKOUT DIET PLAN
+            ATHLETIC DIET PLAN
           </h1>
-          <p className="text-green-400/50 font-mono text-xs tracking-[0.3em] uppercase">Lean Bulk · Clean Fuel · Real Gains</p>
+          <p className="text-green-400/50 font-mono text-xs tracking-[0.3em] uppercase">Affordable · ₹80–120/day · Real Gains</p>
         </div>
 
         {/* Tab switcher */}
