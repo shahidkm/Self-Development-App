@@ -691,6 +691,40 @@ export default function MoneyPage() {
                     </div>
                 )}
 
+                {/* Budget Ledgers */}
+                {budgetSaved && (
+                    <motion.div
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.25 }}
+                        className="dash-glass rounded-2xl p-6 mb-10"
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-mono tracking-widest uppercase text-amber-400 flex items-center gap-2">
+                                <Wallet size={14} /> Budget Ledgers
+                            </h3>
+                            <span className="text-xs font-mono text-gray-400">Income: <span className="text-emerald-400 font-bold">₹{Number(budgetSaved.income).toLocaleString()}</span></span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {budgetSaved.ledgers.map((l, i) => {
+                                const allocated = (Number(budgetSaved.income) * Number(l.percent)) / 100;
+                                return (
+                                    <div key={i} className="dash-glass rounded-xl p-4 border border-amber-500/10">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-white font-medium text-sm truncate">{l.name}</span>
+                                            <span className="text-amber-400 font-mono text-xs shrink-0 ml-1">{l.percent}%</span>
+                                        </div>
+                                        <div className="text-xl font-bold text-amber-300 font-mono">₹{allocated.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                                        <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                                            <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${Math.min(l.percent, 100)}%` }} />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </motion.div>
+                )}
+
                 {/* Charts Overview */}
 
                 <motion.div
