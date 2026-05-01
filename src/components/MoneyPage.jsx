@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { PieChart as PieChartIcon, BarChart3, TrendingUp, TrendingDown, IndianRupee, Search, Filter, Plus, PlusCircle, CheckCircle2, Edit2, Trash2, X, ShoppingCart, Check, AlertCircle, Minus, ArrowUp, Wallet, Percent } from "lucide-react";
+import { PieChart as PieChartIcon, BarChart3, TrendingUp, TrendingDown, IndianRupee, Search, Filter, Plus, PlusCircle, CheckCircle2, Edit2, Trash2, X, ShoppingCart, Check, AlertCircle, Minus, ArrowUp, Wallet, Percent, RefreshCw, Eye } from "lucide-react";
 import Navbar from "./NavBar";
 import CloudinaryUpload from "./CloudinaryUpload";
 import Chart from "react-apexcharts";
@@ -18,6 +18,7 @@ export default function MoneyPage() {
     const [formOpen, setFormOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [activeTab, setActiveTab] = useState("transactions");
+    const [budgetViewMode, setBudgetViewMode] = useState("create"); // "create" or "view"
     const [shoppingPlans, setShoppingPlans] = useState([]);
     const [completedPlans, setCompletedPlans] = useState([]);
     const [shopForm, setShopForm] = useState({ name: "", amount: "", image_url: "", priority: "medium", quantity: "", unit: "nos" });
@@ -38,7 +39,7 @@ export default function MoneyPage() {
     const [showCompleted, setShowCompleted] = useState(false);
     const [txSearch, setTxSearch] = useState("");
     const [budgetIncome, setBudgetIncome] = useState("");
-    const [budgetLedgers, setBudgetLedgers] = useState([{ name: "", percent: "" }]);
+    const [budgetLedgers, setBudgetLedgers] = useState([{ name: "", percent: "", amount: "" }]);
     const [budgetSaved, setBudgetSaved] = useState(null);
     const [budgetLoading, setBudgetLoading] = useState(false);
     const [budgetDraft, setBudgetDraft] = useState(() => {
@@ -82,6 +83,10 @@ export default function MoneyPage() {
         fetchBudgetPlan();
     }, []);
 
+    useEffect(() => {
+        syncLedgersWithCategories();
+    }, [budgetSaved, categories]);
+
     async function fetchBudgetPlan() {
         const { data } = await supabase.from("budget_plan").select("*").order("created_at", { ascending: false }).limit(1);
         if (data && data[0]) setBudgetSaved({ income: data[0].income, ledgers: data[0].ledgers });
@@ -111,7 +116,7 @@ export default function MoneyPage() {
     function loadBudgetDraft() {
         if (!budgetDraft) return;
         setBudgetIncome(budgetDraft.income || "");
-        setBudgetLedgers(budgetDraft.ledgers?.length ? budgetDraft.ledgers : [{ name: "", percent: "" }]);
+        setBudgetLedgers(budgetDraft.ledgers?.length ? budgetDraft.ledgers : [{ name: "", percent: "", amount: "" }]);
     }
 
     function clearBudgetDraft() {
@@ -122,6 +127,72 @@ export default function MoneyPage() {
     async function fetchCategories() {
         const { data } = await supabase.from("categories").select("name").order("name");
         setCategories((data || []).map(c => c.name));
+    }
+
+    // Sync budget ledgers with categories
+    function syncLedgersWithCategories() {
+        if (budgetSaved?.ledgers) {
+            const existingLedgerNames = budgetSaved.ledgers.map(l => l.name);
+            const newCategories = existingLedgerNames.filter(name => name && !categories.includes(name));
+            
+            if (newCategories.length > 0) {
+                newCategories.forEach(async (name) => {
+                    await supabase.from("categories").upsert({ name }, { onConflict: "name" });
+                });
+                fetchCategories();
+            }
+        }
+    }
+
+    // Load categories into budget ledgers
+    function loadCategoriesIntoBudget() {
+        const categoryLedgers = categories.map(cat => {
+            const existing = budgetLedgers.find(l => l.name === cat);
+            return existing || { name: cat, percent: "", amount: "" };
+        });
+        
+        // Add any existing ledgers that aren't categories
+        const nonCategoryLedgers = budgetLedgers.filter(l => l.name && !categories.includes(l.name));
+        
+        setBudgetLedgers([...categoryLedgers, ...nonCategoryLedgers]);
+    }
+
+    // Calculate percentage when amount changes
+    function updateLedgerAmount(index, amount) {
+        const numAmount = Number(amount) || 0;
+        const income = Number(budgetIncome) || 0;
+        const percent = income > 0 ? ((numAmount / income) * 100).toFixed(1) : "";
+        
+        setBudgetLedgers(ls => ls.map((x, j) => 
+            j === index ? { ...x, amount, percent } : x
+        ));
+    }
+
+    // Calculate amount when percentage changes
+    function updateLedgerPercent(index, percent) {
+        const numPercent = Number(percent) || 0;
+        const income = Number(budgetIncome) || 0;
+        const amount = income > 0 ? ((numPercent / 100) * income).toFixed(0) : "";
+        
+        setBudgetLedgers(ls => ls.map((x, j) => 
+            j === index ? { ...x, percent, amount } : x
+        ));
+    }
+
+    // Recalculate all amounts when income changes
+    function updateIncome(newIncome) {
+        setBudgetIncome(newIncome);
+        const income = Number(newIncome) || 0;
+        
+        if (income > 0) {
+            setBudgetLedgers(ls => ls.map(l => {
+                if (l.percent) {
+                    const amount = ((Number(l.percent) / 100) * income).toFixed(0);
+                    return { ...l, amount };
+                }
+                return l;
+            }));
+        }
     }
 
     async function addCategory(name) {
@@ -472,6 +543,16 @@ export default function MoneyPage() {
                         }`}
                     >
                         <span className="flex items-center gap-2"><Wallet size={13} /> Budget Plan</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("budget-view")}
+                        className={`px-5 py-2 rounded-lg text-xs font-mono tracking-widest uppercase transition-all ${
+                            activeTab === "budget-view"
+                                ? "bg-gradient-to-r from-emerald-500/30 to-teal-500/30 text-emerald-300 border border-emerald-500/30"
+                                : "text-gray-500 hover:text-gray-300"
+                        }`}
+                    >
+                        <span className="flex items-center gap-2"><Eye size={13} /> Budget View</span>
                     </button>
                 </div>
 
@@ -892,6 +973,221 @@ export default function MoneyPage() {
                 </>
                 }
 
+                {activeTab === "budget-view" && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
+                        <div className="text-center mb-10">
+                            <div className="inline-flex items-center justify-center p-4 dash-glass rounded-2xl mb-4 text-emerald-400 border border-emerald-500/30 shadow-[0_0_20px_rgba(52,211,153,0.2)]">
+                                <Eye size={42} strokeWidth={2} />
+                            </div>
+                            <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-100 via-white to-gray-400 mb-2 tracking-wide">Budget Analysis</h1>
+                            <p className="text-emerald-400/60 font-mono text-sm tracking-widest uppercase">Financial Allocation Overview</p>
+                        </div>
+
+                        {budgetSaved ? (
+                            <div className="space-y-6">
+                                {/* Budget Overview Card */}
+                                <div className="dash-glass rounded-3xl p-6 md:p-8 relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-emerald-500/0 via-emerald-500 to-emerald-500/0 opacity-50"></div>
+                                    
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 pb-4 border-b border-white/5">
+                                        <h2 className="text-xl font-bold text-gray-200 flex items-center gap-3">
+                                            <Wallet className="text-emerald-400" size={24} />
+                                            Active Budget Plan
+                                        </h2>
+                                        <div className="text-right mt-2 md:mt-0">
+                                            <p className="text-xs font-mono tracking-widest uppercase text-gray-400">Monthly Income</p>
+                                            <p className="text-2xl font-bold text-emerald-400 font-mono">₹{Number(budgetSaved.income).toLocaleString()}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Ledgers Grid */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+                                        {budgetSaved.ledgers.map((ledger, i) => {
+                                            const allocated = (Number(budgetSaved.income) * Number(ledger.percent)) / 100;
+                                            const color = NEON_COLORS[i % NEON_COLORS.length];
+                                            
+                                            return (
+                                                <div key={i} className="dash-glass rounded-xl p-4 border border-white/10 hover:border-emerald-500/30 transition-all group">
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <h3 className="text-white font-medium text-sm truncate group-hover:text-emerald-400 transition-colors">{ledger.name}</h3>
+                                                        <span className="text-emerald-400 font-mono text-xs shrink-0 ml-2 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                                                            {ledger.percent}%
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    <div className="mb-3">
+                                                        <div className="text-2xl font-bold text-emerald-300 font-mono mb-1">
+                                                            ₹{allocated.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                        </div>
+                                                        <div className="text-xs text-gray-400 font-mono">
+                                                            per month
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="space-y-2">
+                                                        <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                                                            <div 
+                                                                className="h-full rounded-full transition-all duration-500" 
+                                                                style={{ 
+                                                                    width: `${Math.min(ledger.percent, 100)}%`,
+                                                                    background: `linear-gradient(90deg, ${color}, ${color}80)`
+                                                                }} 
+                                                            />
+                                                        </div>
+                                                        <div className="flex justify-between text-xs font-mono text-gray-500">
+                                                            <span>Daily: ₹{(allocated / 30).toFixed(0)}</span>
+                                                            <span>Weekly: ₹{(allocated / 4.33).toFixed(0)}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Budget Summary */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {(() => {
+                                            const totalPercent = budgetSaved.ledgers.reduce((s, l) => s + Number(l.percent), 0);
+                                            const totalAllocated = budgetSaved.ledgers.reduce((s, l) => s + ((Number(budgetSaved.income) * Number(l.percent)) / 100), 0);
+                                            const remaining = Number(budgetSaved.income) - totalAllocated;
+                                            
+                                            return (
+                                                <>
+                                                    <div className="dash-glass rounded-xl p-4 border-l-4 border-l-emerald-500">
+                                                        <p className="text-xs font-mono tracking-widest uppercase text-emerald-400/70 mb-1">Total Allocated</p>
+                                                        <p className="text-xl font-bold text-emerald-400 font-mono">₹{totalAllocated.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                                                        <p className="text-xs text-gray-400 font-mono mt-1">{totalPercent.toFixed(1)}% of income</p>
+                                                    </div>
+                                                    
+                                                    <div className={`dash-glass rounded-xl p-4 border-l-4 ${remaining >= 0 ? 'border-l-cyan-500' : 'border-l-rose-500'}`}>
+                                                        <p className="text-xs font-mono tracking-widest uppercase text-gray-400 mb-1">Remaining</p>
+                                                        <p className={`text-xl font-bold font-mono ${remaining >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>
+                                                            ₹{Math.abs(remaining).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                        </p>
+                                                        <p className="text-xs text-gray-400 font-mono mt-1">
+                                                            {remaining >= 0 ? 'Available' : 'Over budget'}
+                                                        </p>
+                                                    </div>
+                                                    
+                                                    <div className="dash-glass rounded-xl p-4 border-l-4 border-l-amber-500">
+                                                        <p className="text-xs font-mono tracking-widest uppercase text-amber-400/70 mb-1">Ledgers Count</p>
+                                                        <p className="text-xl font-bold text-amber-400 font-mono">{budgetSaved.ledgers.length}</p>
+                                                        <p className="text-xs text-gray-400 font-mono mt-1">Active categories</p>
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+
+                                {/* Budget Breakdown Chart */}
+                                <div className="dash-glass rounded-2xl p-6 relative overflow-hidden">
+                                    <h3 className="text-xl font-bold text-gray-200 mb-6 flex items-center gap-2">
+                                        <PieChartIcon size={20} className="text-emerald-400" />
+                                        Budget Allocation Breakdown
+                                    </h3>
+                                    
+                                    {(() => {
+                                        const chartData = {
+                                            series: budgetSaved.ledgers.map(l => (Number(budgetSaved.income) * Number(l.percent)) / 100),
+                                            options: {
+                                                chart: { type: 'donut', background: 'transparent', foreColor: '#94a3b8' },
+                                                labels: budgetSaved.ledgers.map(l => l.name),
+                                                colors: NEON_COLORS,
+                                                stroke: { show: false },
+                                                dataLabels: { enabled: false },
+                                                legend: {
+                                                    position: 'bottom',
+                                                    fontFamily: 'monospace',
+                                                    labels: { colors: '#94a3b8' }
+                                                },
+                                                plotOptions: {
+                                                    pie: {
+                                                        donut: {
+                                                            size: '70%',
+                                                            background: 'transparent',
+                                                            labels: {
+                                                                show: true,
+                                                                name: { show: true, fontSize: '12px', fontFamily: 'monospace', color: '#64748b' },
+                                                                value: {
+                                                                    show: true,
+                                                                    fontSize: '20px',
+                                                                    fontFamily: 'monospace',
+                                                                    fontWeight: 'bold',
+                                                                    color: '#f1f5f9',
+                                                                    formatter: (val) => `₹${Number(val).toLocaleString()}`
+                                                                },
+                                                                total: {
+                                                                    show: true,
+                                                                    label: 'BUDGET',
+                                                                    fontFamily: 'monospace',
+                                                                    color: '#64748b',
+                                                                    formatter: () => `₹${Number(budgetSaved.income).toLocaleString()}`
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                tooltip: {
+                                                    theme: 'dark',
+                                                    y: { formatter: (val) => `₹${val.toLocaleString()}` }
+                                                }
+                                            }
+                                        };
+                                        
+                                        return (
+                                            <div className="h-[400px] w-full">
+                                                <Chart
+                                                    options={chartData.options}
+                                                    series={chartData.series}
+                                                    type="donut"
+                                                    height="100%"
+                                                />
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+
+                                {/* Quick Actions */}
+                                <div className="dash-glass rounded-2xl p-6">
+                                    <h3 className="text-lg font-bold text-gray-200 mb-4 flex items-center gap-2">
+                                        <Plus size={18} className="text-emerald-400" />
+                                        Quick Actions
+                                    </h3>
+                                    <div className="flex flex-wrap gap-3">
+                                        <button
+                                            onClick={() => setActiveTab("budget")}
+                                            className="px-4 py-2 bg-gradient-to-r from-emerald-500/20 to-teal-600/20 hover:from-emerald-500/30 hover:to-teal-600/30 text-emerald-400 rounded-xl text-xs font-semibold tracking-widest uppercase border border-emerald-500/30 transition-all"
+                                        >
+                                            Edit Budget Plan
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab("transactions")}
+                                            className="px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-600/20 hover:from-cyan-500/30 hover:to-blue-600/30 text-cyan-400 rounded-xl text-xs font-semibold tracking-widest uppercase border border-cyan-500/30 transition-all"
+                                        >
+                                            View Transactions
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-20 dash-glass rounded-3xl">
+                                <div className="inline-flex items-center justify-center p-6 bg-gray-900/50 border border-white/5 rounded-3xl mb-6">
+                                    <Wallet className="text-gray-600" size={56} strokeWidth={1.5} />
+                                </div>
+                                <h3 className="text-2xl font-bold text-gray-300 mb-2">No Budget Plan Found</h3>
+                                <p className="text-gray-500 font-mono text-[10px] tracking-widest uppercase mb-8">Create a budget plan to view analysis</p>
+                                <button
+                                    onClick={() => setActiveTab("budget")}
+                                    className="px-8 py-4 bg-gradient-to-r from-emerald-500/80 to-teal-600/80 hover:from-emerald-500 hover:to-teal-600 text-white rounded-xl font-semibold text-xs tracking-widest uppercase border border-emerald-500/50 transition-all"
+                                >
+                                    Create Budget Plan
+                                </button>
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+
                 {activeTab === "budget" && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
                         <div className="text-center mb-10">
@@ -974,55 +1270,116 @@ export default function MoneyPage() {
                                         type="number" min="0" step="0.01" placeholder="e.g. 50000"
                                         className="dash-input w-full md:w-64 px-4 py-3 rounded-xl placeholder-gray-600"
                                         value={budgetIncome}
-                                        onChange={(e) => setBudgetIncome(e.target.value)}
+                                        onChange={(e) => updateIncome(e.target.value)}
                                         required
                                     />
                                 </div>
                                 <div>
                                     <div className="flex items-center justify-between mb-3">
                                         <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">Ledgers (must total 100%)</label>
-                                        <button
-                                            type="button"
-                                            onClick={() => setBudgetLedgers(l => [...l, { name: "", percent: "" }])}
-                                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-mono tracking-widest uppercase hover:bg-amber-500/20 transition-all"
-                                        >
-                                            <Plus size={12} /> Add Ledger
-                                        </button>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={loadCategoriesIntoBudget}
+                                                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono tracking-widest uppercase hover:bg-cyan-500/20 transition-all"
+                                                title="Load transaction categories as ledgers"
+                                            >
+                                                <RefreshCw size={12} /> Sync Categories
+                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setBudgetLedgers(l => [...l, { name: "", percent: "", amount: "" }])}
+                                                                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-mono tracking-widest uppercase hover:bg-amber-500/20 transition-all"
+                                                            >
+                                                                <Plus size={12} /> Add Ledger
+                                                            </button>
+                                        </div>
                                     </div>
                                     <div className="space-y-2">
+                                        <div className="grid grid-cols-12 gap-2 text-xs font-mono tracking-widest uppercase text-gray-500 px-1 mb-3">
+                                            <div className="col-span-6">Ledger Name</div>
+                                            <div className="col-span-3 text-center">Amount (₹)</div>
+                                            <div className="col-span-2 text-center">Percent</div>
+                                            <div className="col-span-1"></div>
+                                        </div>
                                         {budgetLedgers.map((l, i) => (
-                                            <div key={i} className="flex gap-2 items-center">
-                                                <input
-                                                    type="text" placeholder="Ledger name (e.g. Savings)"
-                                                    className="dash-input flex-1 px-4 py-2.5 rounded-xl placeholder-gray-600 text-sm"
-                                                    value={l.name}
-                                                    onChange={(e) => setBudgetLedgers(ls => ls.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
-                                                />
-                                                <div className="relative w-28">
+                                            <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                                                <div className="col-span-6 relative">
+                                                    <input
+                                                        type="text" placeholder="Ledger name (e.g. Savings)"
+                                                        className="dash-input w-full px-4 py-2.5 rounded-xl placeholder-gray-600 text-sm"
+                                                        value={l.name}
+                                                        onChange={(e) => setBudgetLedgers(ls => ls.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
+                                                        list={`categories-${i}`}
+                                                    />
+                                                    <datalist id={`categories-${i}`}>
+                                                        {categories.map(cat => (
+                                                            <option key={cat} value={cat} />
+                                                        ))}
+                                                    </datalist>
+                                                </div>
+                                                <div className="col-span-3 relative">
+                                                    <input
+                                                        type="number" min="0" step="1" placeholder="Amount"
+                                                        className="dash-input w-full px-4 py-2.5 rounded-xl placeholder-gray-600 text-sm pr-8"
+                                                        value={l.amount}
+                                                        onChange={(e) => updateLedgerAmount(i, e.target.value)}
+                                                    />
+                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">₹</span>
+                                                </div>
+                                                <div className="col-span-2 relative">
                                                     <input
                                                         type="number" min="0" max="100" step="0.1" placeholder="%"
-                                                        className="dash-input w-full px-4 py-2.5 rounded-xl placeholder-gray-600 text-sm pr-7"
+                                                        className="dash-input w-full px-3 py-2.5 rounded-xl placeholder-gray-600 text-sm pr-6"
                                                         value={l.percent}
-                                                        onChange={(e) => setBudgetLedgers(ls => ls.map((x, j) => j === i ? { ...x, percent: e.target.value } : x))}
+                                                        onChange={(e) => updateLedgerPercent(i, e.target.value)}
                                                     />
-                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">%</span>
+                                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">%</span>
                                                 </div>
-                                                {budgetLedgers.length > 1 && (
-                                                    <button type="button" onClick={() => setBudgetLedgers(ls => ls.filter((_, j) => j !== i))}
-                                                        className="p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all"
-                                                    >
-                                                        <X size={14} />
-                                                    </button>
-                                                )}
+                                                <div className="col-span-1 flex justify-center">
+                                                    {budgetLedgers.length > 1 && (
+                                                        <button type="button" onClick={() => setBudgetLedgers(ls => ls.filter((_, j) => j !== i))}
+                                                            className="p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
-                                    {budgetLedgers.some(l => l.percent) && (() => {
-                                        const total = budgetLedgers.reduce((s, l) => s + (Number(l.percent) || 0), 0);
+                                    {budgetLedgers.some(l => l.percent || l.amount) && (() => {
+                                        const totalPercent = budgetLedgers.reduce((s, l) => s + (Number(l.percent) || 0), 0);
+                                        const totalAmount = budgetLedgers.reduce((s, l) => s + (Number(l.amount) || 0), 0);
+                                        const income = Number(budgetIncome) || 0;
+                                        
                                         return (
-                                            <p className={`mt-2 text-xs font-mono ${total === 100 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                                                Total: {total}% {total === 100 ? '✓' : `(${100 - total > 0 ? `${(100 - total).toFixed(1)}% remaining` : `${(total - 100).toFixed(1)}% over`})`}
-                                            </p>
+                                            <div className="mt-3 p-3 rounded-lg bg-white/5 border border-white/10">
+                                                <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+                                                    <div>
+                                                        <span className="text-gray-400">Total Allocated: </span>
+                                                        <span className={totalAmount === income ? 'text-emerald-400' : totalAmount > income ? 'text-rose-400' : 'text-amber-400'}>
+                                                            ₹{totalAmount.toLocaleString()}
+                                                        </span>
+                                                        {income > 0 && (
+                                                            <span className="text-gray-500 ml-2">
+                                                                ({totalAmount > 0 ? ((totalAmount / income) * 100).toFixed(1) : '0'}%)
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-gray-400">Remaining: </span>
+                                                        <span className={income - totalAmount >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                                                            ₹{(income - totalAmount).toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                {totalPercent !== 100 && (
+                                                    <p className={`mt-2 text-xs font-mono ${totalPercent === 100 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                                        Percentage Total: {totalPercent.toFixed(1)}% {totalPercent === 100 ? '✓' : `(${100 - totalPercent > 0 ? `${(100 - totalPercent).toFixed(1)}% remaining` : `${(totalPercent - 100).toFixed(1)}% over`})`}
+                                                    </p>
+                                                )}
+                                            </div>
                                         );
                                     })()}
                                 </div>
