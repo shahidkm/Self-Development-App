@@ -18,76 +18,66 @@ const TODAY = new Date().toISOString().split('T')[0];
 // hour range when each meal is "current"
 const MEAL_HOURS = {
   'Pre-Workout':           [5, 8],
-  'Post-Workout Breakfast':[8, 11],
-  'Mid-Morning':           [10, 12],
-  'Lunch':                 [12, 15],
-  'Evening Snack':         [16, 18],
-  'Dinner':                [19, 21],
-  'Before Bed':            [21, 24],
+  'Post-Workout':          [8, 10],
+  'Breakfast':             [9, 12],
+  'Lunch':                 [12, 16],
+  'Dinner':                [19, 22],
 };
 
 const MEALS_ALL = [
   {
     time: 'Pre-Workout',
-    subtitle: '🌅 Cheap energy boost',
+    subtitle: '🌅 Quick energy boost',
     icon: Sun,
     color: '#facc15',
-    items: ['1 banana 🍌', 'Black tea / coffee (optional)'],
-    tip: "Don't go empty stomach — this alone improves your strength",
+    items: ['1 banana 🍌', 'Tea/coffee (optional)'],
+    tip: "Simple fuel for your workout session",
     workoutOnly: true,
   },
   {
     time: 'Post-Workout',
-    subtitle: '🏋️ Most important meal',
+    subtitle: '🏋️ Main recovery meal',
     icon: Dumbbell,
     color: '#4ade80',
-    items: ['3 boiled eggs 🥚', '2 slices bread  OR  1 banana'],
-    tip: 'This is your muscle-building base',
+    items: ['2 boiled eggs 🥚', '2 bread + 1 tbsp peanut butter 🥜', '200 ml milk 🥛'],
+    tip: 'Strong start: protein + calories',
     workoutOnly: true,
   },
   {
     time: 'Breakfast',
-    subtitle: '🍛 Simple + cheap + carbs',
+    subtitle: '🍛 Choose your base',
     icon: Coffee,
     color: '#fb923c',
-    items: ['3 idli + sambar', 'OR  2 dosa + chutney', 'OR  Oats (with water or little milk)'],
-    tip: 'Simple + cheap + enough carbs',
+    items: [
+      '3 idli + sambar',
+      'OR 2 dosa + chutney + sambar', 
+      'OR 50g oats + milk',
+      '+ 1 tbsp peanut butter'
+    ],
+    tip: 'Pick one option + always add peanut butter',
     workoutOnly: false,
   },
   {
     time: 'Lunch',
-    subtitle: '🍗 Big balanced meal',
+    subtitle: '🍗 Biggest meal of the day',
     icon: Utensils,
     color: '#22d3ee',
-    items: ['Rice 🍚 + any curry', '2 eggs 🥚  OR  Small fish 🐟  OR  Soya chunks', 'Vegetables + little curd'],
-    tip: 'Soya chunks = best cheap protein option',
-    workoutOnly: false,
-  },
-  {
-    time: 'Evening Snack',
-    subtitle: '☕ ~4–5 PM',
-    icon: Apple,
-    color: '#e879f9',
-    items: ['Roasted peanuts 🥜 (handful)', 'OR  Kadala (boiled chickpeas)'],
-    tip: 'Cheap protein + keeps you full',
+    items: [
+      '2–2.5 cups rice 🍚', 
+      'Curry of choice',
+      '60g soya chunks (dry weight) ⭐',
+      'Vegetables + curd'
+    ],
+    tip: 'This compensates for removed snacks',
     workoutOnly: false,
   },
   {
     time: 'Dinner',
-    subtitle: '🌙 Light + protein focused',
+    subtitle: '🌙 Evening fuel',
     icon: Moon,
     color: '#818cf8',
-    items: ['2 chapati', 'Egg curry / soya chunks / small chicken portion', 'Vegetables'],
-    tip: 'Keep lighter than lunch',
-    workoutOnly: false,
-  },
-  {
-    time: 'Before Sleep',
-    subtitle: '🛌 Recovery fuel',
-    icon: BedDouble,
-    color: '#f472b6',
-    items: ['1 glass milk 🥛 (if affordable)'],
-    tip: 'Slow protein for overnight recovery',
+    items: ['3 chapati', '2 eggs 🥚', 'Vegetables'],
+    tip: 'Increased portions for better gains',
     workoutOnly: false,
   },
 ];
@@ -102,11 +92,9 @@ const RULES = [
 const TIMELINE_TIMES = [
   { time: 'Pre-Workout',  label: '6:00 AM' },
   { time: 'Post-Workout', label: '8:00 AM' },
-  { time: 'Breakfast',    label: '9:00 AM' },
+  { time: 'Breakfast',    label: '9:30 AM' },
   { time: 'Lunch',        label: '1:00 PM' },
-  { time: 'Evening Snack',label: '4:30 PM' },
   { time: 'Dinner',       label: '8:00 PM' },
-  { time: 'Before Sleep', label: '10:00 PM' },
 ];
 
 function getCurrentMeal() {
@@ -123,47 +111,53 @@ function MealCard({ meal, checked, onCheck, defaultOpen }) {
   const { icon: Icon, color, time, subtitle, items, tip } = meal;
 
   return (
-    <div className="rounded-2xl overflow-hidden transition-all"
+    <div className="rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02]"
       style={{ ...GLASS, borderColor: checked ? color + '50' : color + '20',
-        boxShadow: checked ? `0 0 18px ${color}18` : GLASS.boxShadow }}>
+        boxShadow: checked ? `0 0 25px ${color}25` : GLASS.boxShadow }}>
       <button onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 p-4 text-left"
+        className="w-full flex items-center gap-4 p-5 text-left group"
         style={{ background: 'transparent' }}>
         {/* check circle */}
         <button onClick={e => { e.stopPropagation(); onCheck(time); }}
-          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all"
-          style={{ background: checked ? color + '25' : 'rgba(255,255,255,0.04)',
-            border: `2px solid ${checked ? color : 'rgba(255,255,255,0.1)'}`,
-            boxShadow: checked ? `0 0 10px ${color}40` : 'none' }}>
-          {checked && <Check size={13} style={{ color }} />}
+          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 hover:scale-110"
+          style={{ background: checked ? color + '30' : 'rgba(255,255,255,0.05)',
+            border: `2px solid ${checked ? color : 'rgba(255,255,255,0.15)'}`,
+            boxShadow: checked ? `0 0 15px ${color}50` : 'none' }}>
+          {checked && <Check size={14} style={{ color }} />}
         </button>
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: color + '18', border: `1px solid ${color}35` }}>
-          <Icon size={16} style={{ color }} />
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110"
+          style={{ background: color + '20', border: `1px solid ${color}40` }}>
+          <Icon size={18} style={{ color }} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className={`font-bold text-sm leading-tight ${checked ? 'line-through opacity-50' : 'text-slate-200'}`}>{time}</p>
-          <p className="text-[11px] font-mono text-slate-500 mt-0.5">{subtitle}</p>
+          <p className={`font-bold text-base leading-tight transition-all duration-300 ${checked ? 'line-through opacity-50' : 'text-slate-100 group-hover:text-white'}`}>{time}</p>
+          <p className="text-xs font-mono text-slate-400 mt-1">{subtitle}</p>
         </div>
-        {open ? <ChevronUp size={15} className="text-slate-600 flex-shrink-0" />
-               : <ChevronDown size={15} className="text-slate-600 flex-shrink-0" />}
+        <div className="flex items-center gap-2">
+          {checked && <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-mono">✓ Done</span>}
+          {open ? <ChevronUp size={16} className="text-slate-500 transition-transform duration-300" />
+                 : <ChevronDown size={16} className="text-slate-500 transition-transform duration-300" />}
+        </div>
       </button>
 
       {open && (
-        <div className="px-4 pb-4">
-          <div className="h-px mb-3" style={{ background: `linear-gradient(90deg, ${color}40, transparent)` }} />
-          <ul className="space-y-2 mb-3">
-            {items.map(item => (
-              <li key={item} className="flex items-start gap-2 text-sm text-slate-300">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
-                {item}
-              </li>
+        <div className="px-5 pb-5">
+          <div className="h-px mb-4" style={{ background: `linear-gradient(90deg, ${color}50, transparent)` }} />
+          <div className="space-y-3 mb-4">
+            {items.map((item, idx) => (
+              <div key={item} className="flex items-start gap-3 text-sm text-slate-200 group/item">
+                <div className="mt-2 w-2 h-2 rounded-full flex-shrink-0 transition-all duration-300 group-hover/item:scale-125" 
+                     style={{ background: color }} />
+                <span className="leading-relaxed group-hover/item:text-white transition-colors duration-300">{item}</span>
+              </div>
             ))}
-          </ul>
-          <p className="text-[11px] font-mono px-3 py-2 rounded-lg"
-            style={{ background: color + '10', color, border: `1px solid ${color}25` }}>
-            👉 {tip}
-          </p>
+          </div>
+          <div className="p-4 rounded-xl transition-all duration-300 hover:scale-[1.02]"
+            style={{ background: color + '12', border: `1px solid ${color}30` }}>
+            <p className="text-xs font-mono leading-relaxed" style={{ color }}>
+              💡 {tip}
+            </p>
+          </div>
         </div>
       )}
     </div>
@@ -174,45 +168,61 @@ function MealCard({ meal, checked, onCheck, defaultOpen }) {
 function TimelineView({ meals, checked, onCheck }) {
   const currentMeal = getCurrentMeal();
   return (
-    <div className="relative pl-8">
+    <div className="relative pl-10">
       {/* vertical line */}
-      <div className="absolute left-3 top-2 bottom-2 w-px bg-gradient-to-b from-transparent via-slate-700 to-transparent" />
-      <div className="space-y-4">
+      <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-gradient-to-b from-transparent via-slate-600 to-transparent" />
+      <div className="space-y-6">
         {meals.map((meal) => {
           const tl = TIMELINE_TIMES.find(t => t.time === meal.time);
           const isCurrent = meal.time === currentMeal;
           const isChecked = checked[meal.time];
           return (
-            <div key={meal.time} className="relative flex items-start gap-4">
+            <div key={meal.time} className="relative flex items-start gap-5 group">
               {/* dot */}
-              <div className="absolute -left-5 mt-1 w-3 h-3 rounded-full flex-shrink-0 transition-all"
+              <div className="absolute -left-7 mt-2 w-4 h-4 rounded-full flex-shrink-0 transition-all duration-300 group-hover:scale-125"
                 style={{ background: isChecked ? meal.color : isCurrent ? meal.color : '#1e293b',
-                  border: `2px solid ${isCurrent || isChecked ? meal.color : '#334155'}`,
-                  boxShadow: isCurrent ? `0 0 10px ${meal.color}` : 'none' }} />
-              <div className="flex-1 rounded-2xl p-4 transition-all"
-                style={{ ...GLASS, borderColor: isCurrent ? meal.color + '40' : meal.color + '15',
+                  border: `3px solid ${isCurrent || isChecked ? meal.color : '#475569'}`,
+                  boxShadow: isCurrent ? `0 0 20px ${meal.color}80` : isChecked ? `0 0 15px ${meal.color}60` : 'none' }} />
+              
+              <div className="flex-1 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg"
+                style={{ ...GLASS, borderColor: isCurrent ? meal.color + '50' : meal.color + '20',
                   background: isCurrent ? meal.color + '08' : GLASS.background }}>
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <span className="text-[10px] font-mono text-slate-500">{tl?.label}</span>
-                    {isCurrent && <span className="ml-2 text-[9px] font-mono px-2 py-0.5 rounded-full"
-                      style={{ background: meal.color + '20', color: meal.color }}>NOW</span>}
-                    <p className={`font-bold text-sm mt-0.5 ${isChecked ? 'line-through opacity-40' : 'text-slate-200'}`}>{meal.time}</p>
+                
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-mono text-slate-400">{tl?.label}</span>
+                        {isCurrent && <span className="text-[10px] font-mono px-2 py-1 rounded-full animate-pulse"
+                          style={{ background: meal.color + '25', color: meal.color }}>CURRENT</span>}
+                      </div>
+                      <p className={`font-bold text-lg transition-all duration-300 ${isChecked ? 'line-through opacity-40' : 'text-slate-100 group-hover:text-white'}`}>{meal.time}</p>
+                    </div>
                   </div>
                   <button onClick={() => onCheck(meal.time)}
-                    className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all"
-                    style={{ background: isChecked ? meal.color + '25' : 'rgba(255,255,255,0.04)',
-                      border: `2px solid ${isChecked ? meal.color : 'rgba(255,255,255,0.1)'}` }}>
-                    {isChecked && <Check size={13} style={{ color: meal.color }} />}
+                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 hover:scale-110"
+                    style={{ background: isChecked ? meal.color + '30' : 'rgba(255,255,255,0.05)',
+                      border: `2px solid ${isChecked ? meal.color : 'rgba(255,255,255,0.15)'}`,
+                      boxShadow: isChecked ? `0 0 15px ${meal.color}50` : 'none' }}>
+                    {isChecked && <Check size={14} style={{ color: meal.color }} />}
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {meal.items.map(item => (
-                    <span key={item} className="text-[11px] px-2 py-0.5 rounded-lg text-slate-400"
-                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      {item}
-                    </span>
+                
+                <div className="space-y-2 mb-4">
+                  {meal.items.map((item, idx) => (
+                    <div key={item} className="flex items-start gap-3 text-sm text-slate-200 group/item">
+                      <div className="mt-2 w-2 h-2 rounded-full flex-shrink-0 transition-all duration-300 group-hover/item:scale-125" 
+                           style={{ background: meal.color }} />
+                      <span className="leading-relaxed group-hover/item:text-white transition-colors duration-300">{item}</span>
+                    </div>
                   ))}
+                </div>
+                
+                <div className="p-3 rounded-xl transition-all duration-300"
+                  style={{ background: meal.color + '12', border: `1px solid ${meal.color}25` }}>
+                  <p className="text-xs font-mono leading-relaxed" style={{ color: meal.color }}>
+                    💡 {meal.tip}
+                  </p>
                 </div>
               </div>
             </div>

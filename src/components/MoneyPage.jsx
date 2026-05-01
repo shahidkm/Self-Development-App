@@ -42,6 +42,7 @@ export default function MoneyPage() {
     const [budgetLedgers, setBudgetLedgers] = useState([{ name: "", percent: "", amount: "" }]);
     const [budgetSaved, setBudgetSaved] = useState(null);
     const [budgetLoading, setBudgetLoading] = useState(false);
+    const [budgetEditMode, setBudgetEditMode] = useState(false);
     const [budgetDraft, setBudgetDraft] = useState(() => {
         try { return JSON.parse(localStorage.getItem("budget_draft")) || null; } catch { return null; }
     });
@@ -89,18 +90,37 @@ export default function MoneyPage() {
 
     async function fetchBudgetPlan() {
         const { data } = await supabase.from("budget_plan").select("*").order("created_at", { ascending: false }).limit(1);
-        if (data && data[0]) setBudgetSaved({ income: data[0].income, ledgers: data[0].ledgers });
+        if (data && data[0]) {
+            const plan = { ...data[0], income: data[0].income, ledgers: data[0].ledgers };
+            setBudgetSaved(plan);
+        }
     }
 
     async function saveBudgetPlan(e) {
         e.preventDefault();
-        const ledgers = budgetLedgers.filter(l => l.name.trim() && l.percent);
+        const ledgers = budgetLedgers.filter(l => l.name.trim() && (l.percent || l.amount)).map(l => ({
+            name: l.name,
+            percent: Number(l.percent) || 0,
+            amount: Number(l.amount) || 0
+        }));
         if (!budgetIncome || ledgers.length === 0) return;
         setBudgetLoading(true);
-        await supabase.from("budget_plan").delete().neq("id", 0);
-        await supabase.from("budget_plan").insert({ income: Number(budgetIncome), ledgers });
+        
+        if (budgetEditMode && budgetSaved) {
+            // Update existing budget plan
+            await supabase.from("budget_plan").update({ 
+                income: Number(budgetIncome), 
+                ledgers 
+            }).eq("id", budgetSaved.id);
+        } else {
+            // Create new budget plan (delete old ones first)
+            await supabase.from("budget_plan").delete().neq("id", 0);
+            await supabase.from("budget_plan").insert({ income: Number(budgetIncome), ledgers });
+        }
+        
         localStorage.removeItem("budget_draft");
         setBudgetDraft(null);
+        setBudgetEditMode(false);
         await fetchBudgetPlan();
         setBudgetLoading(false);
     }
@@ -122,6 +142,24 @@ export default function MoneyPage() {
     function clearBudgetDraft() {
         localStorage.removeItem("budget_draft");
         setBudgetDraft(null);
+    }
+
+    function startEditBudget() {
+        if (!budgetSaved) return;
+        setBudgetIncome(budgetSaved.income.toString());
+        setBudgetLedgers(budgetSaved.ledgers.map(l => ({
+            name: l.name,
+            percent: l.percent.toString(),
+            amount: l.amount ? l.amount.toString() : ""
+        })));
+        setBudgetEditMode(true);
+        setActiveTab("budget");
+    }
+
+    function cancelEditBudget() {
+        setBudgetEditMode(false);
+        setBudgetIncome("");
+        setBudgetLedgers([{ name: "", percent: "", amount: "" }]);
     }
 
     async function fetchCategories() {
@@ -780,22 +818,30 @@ export default function MoneyPage() {
                         transition={{ delay: 0.25 }}
                         className="dash-glass rounded-2xl p-6 mb-10"
                     >
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-mono tracking-widest uppercase text-amber-400 flex items-center gap-2">
-                                <Wallet size={14} /> Budget Ledgers
-                            </h3>
-                            <span className="text-xs font-mono text-gray-400">Income: <span className="text-emerald-400 font-bold">₹{Number(budgetSaved.income).toLocaleString()}</span></span>
-                        </div>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-mono tracking-widest uppercase text-amber-400 flex items-center gap-2">
+                                        <Wallet size={14} /> Budget Ledgers
+                                    </h3>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs font-mono text-gray-400">Income: <span className="text-emerald-400 font-bold">₹{Number(budgetSaved.income).toLocaleString()}</span></span>
+                                        <button
+                                            onClick={startEditBudget}
+                                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono tracking-widest uppercase hover:bg-cyan-500/20 transition-all"
+                                        >
+                                            <Edit2 size={12} /> Edit Budget
+                                        </button>
+                                    </div>
+                                </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                             {budgetSaved.ledgers.map((l, i) => {
-                                const allocated = (Number(budgetSaved.income) * Number(l.percent)) / 100;
+                                const savedAmount = l.amount || ((Number(budgetSaved.income) * Number(l.percent)) / 100);
                                 return (
                                     <div key={i} className="dash-glass rounded-xl p-4 border border-amber-500/10">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-white font-medium text-sm truncate">{l.name}</span>
                                             <span className="text-amber-400 font-mono text-xs shrink-0 ml-1">{l.percent}%</span>
                                         </div>
-                                        <div className="text-xl font-bold text-amber-300 font-mono">₹{allocated.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                                        <div className="text-xl font-bold text-amber-300 font-mono">₹{savedAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                                         <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
                                             <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${Math.min(l.percent, 100)}%` }} />
                                         </div>
@@ -1003,7 +1049,7 @@ export default function MoneyPage() {
                                     {/* Ledgers Grid */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
                                         {budgetSaved.ledgers.map((ledger, i) => {
-                                            const allocated = (Number(budgetSaved.income) * Number(ledger.percent)) / 100;
+                                            const savedAmount = ledger.amount || ((Number(budgetSaved.income) * Number(ledger.percent)) / 100);
                                             const color = NEON_COLORS[i % NEON_COLORS.length];
                                             
                                             return (
@@ -1017,7 +1063,7 @@ export default function MoneyPage() {
                                                     
                                                     <div className="mb-3">
                                                         <div className="text-2xl font-bold text-emerald-300 font-mono mb-1">
-                                                            ₹{allocated.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                            ₹{savedAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                                         </div>
                                                         <div className="text-xs text-gray-400 font-mono">
                                                             per month
@@ -1035,8 +1081,8 @@ export default function MoneyPage() {
                                                             />
                                                         </div>
                                                         <div className="flex justify-between text-xs font-mono text-gray-500">
-                                                            <span>Daily: ₹{(allocated / 30).toFixed(0)}</span>
-                                                            <span>Weekly: ₹{(allocated / 4.33).toFixed(0)}</span>
+                                                            <span>Daily: ₹{(savedAmount / 30).toFixed(0)}</span>
+                                                            <span>Weekly: ₹{(savedAmount / 4.33).toFixed(0)}</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1048,7 +1094,7 @@ export default function MoneyPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         {(() => {
                                             const totalPercent = budgetSaved.ledgers.reduce((s, l) => s + Number(l.percent), 0);
-                                            const totalAllocated = budgetSaved.ledgers.reduce((s, l) => s + ((Number(budgetSaved.income) * Number(l.percent)) / 100), 0);
+                                            const totalAllocated = budgetSaved.ledgers.reduce((s, l) => s + (Number(l.amount) || ((Number(budgetSaved.income) * Number(l.percent)) / 100)), 0);
                                             const remaining = Number(budgetSaved.income) - totalAllocated;
                                             
                                             return (
@@ -1089,7 +1135,7 @@ export default function MoneyPage() {
                                     
                                     {(() => {
                                         const chartData = {
-                                            series: budgetSaved.ledgers.map(l => (Number(budgetSaved.income) * Number(l.percent)) / 100),
+                                            series: budgetSaved.ledgers.map(l => l.amount || ((Number(budgetSaved.income) * Number(l.percent)) / 100)),
                                             options: {
                                                 chart: { type: 'donut', background: 'transparent', foreColor: '#94a3b8' },
                                                 labels: budgetSaved.ledgers.map(l => l.name),
@@ -1156,7 +1202,7 @@ export default function MoneyPage() {
                                     </h3>
                                     <div className="flex flex-wrap gap-3">
                                         <button
-                                            onClick={() => setActiveTab("budget")}
+                                            onClick={startEditBudget}
                                             className="px-4 py-2 bg-gradient-to-r from-emerald-500/20 to-teal-600/20 hover:from-emerald-500/30 hover:to-teal-600/30 text-emerald-400 rounded-xl text-xs font-semibold tracking-widest uppercase border border-emerald-500/30 transition-all"
                                         >
                                             Edit Budget Plan
@@ -1233,14 +1279,14 @@ export default function MoneyPage() {
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {budgetSaved.ledgers.map((l, i) => {
-                                        const allocated = (Number(budgetSaved.income) * Number(l.percent)) / 100;
+                                        const savedAmount = l.amount || ((Number(budgetSaved.income) * Number(l.percent)) / 100);
                                         return (
                                             <div key={i} className="dash-glass rounded-xl p-4 border border-amber-500/10">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <span className="text-white font-medium text-sm">{l.name}</span>
                                                     <span className="text-amber-400 font-mono text-xs">{l.percent}%</span>
                                                 </div>
-                                                <div className="text-2xl font-bold text-amber-300 font-mono">₹{allocated.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                                                <div className="text-2xl font-bold text-amber-300 font-mono">₹{savedAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                                                 <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
                                                     <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${Math.min(l.percent, 100)}%` }} />
                                                 </div>
@@ -1261,7 +1307,7 @@ export default function MoneyPage() {
                             <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-amber-500/0 via-amber-500 to-amber-500/0 opacity-50"></div>
                             <h2 className="text-xl font-bold text-gray-200 mb-6 flex items-center gap-3 pb-4 border-b border-white/5">
                                 <Percent className="text-amber-400" size={22} />
-                                {budgetSaved ? "Update Budget Plan" : "Create Budget Plan"}
+                                {budgetEditMode ? "Update Budget Plan" : budgetSaved ? "Update Budget Plan" : "Create Budget Plan"}
                             </h2>
                             <form onSubmit={saveBudgetPlan} className="space-y-6">
                                 <div>
@@ -1388,8 +1434,17 @@ export default function MoneyPage() {
                                         type="submit" disabled={budgetLoading}
                                         className="px-8 py-3 bg-gradient-to-r from-amber-500/80 to-orange-600/80 hover:from-amber-500 hover:to-orange-600 text-white rounded-xl text-xs font-semibold tracking-widest uppercase border border-amber-500/50 transition-all disabled:opacity-50"
                                     >
-                                        {budgetLoading ? "Saving..." : "Save Budget Plan"}
+                                        {budgetLoading ? "Saving..." : budgetEditMode ? "Update Budget Plan" : "Save Budget Plan"}
                                     </button>
+                                    {budgetEditMode && (
+                                        <button
+                                            type="button"
+                                            onClick={cancelEditBudget}
+                                            className="px-6 py-3 bg-gray-700/60 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-semibold tracking-widest uppercase border border-gray-500/40 transition-all"
+                                        >
+                                            Cancel Edit
+                                        </button>
+                                    )}
                                     <button
                                         type="button"
                                         onClick={saveBudgetDraft}
