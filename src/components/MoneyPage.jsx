@@ -38,6 +38,9 @@ export default function MoneyPage() {
     };
     const [showCompleted, setShowCompleted] = useState(false);
     const [txSearch, setTxSearch] = useState("");
+    const [filterLedger, setFilterLedger] = useState("");
+    const [filterFrom, setFilterFrom] = useState("");
+    const [filterTo, setFilterTo] = useState("");
     const [budgetIncome, setBudgetIncome] = useState("");
     const [budgetLedgers, setBudgetLedgers] = useState([{ name: "", percent: "", amount: "" }]);
     const [budgetSaved, setBudgetSaved] = useState(null);
@@ -810,48 +813,6 @@ export default function MoneyPage() {
                     </div>
                 )}
 
-                {/* Budget Ledgers */}
-                {budgetSaved && (
-                    <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.25 }}
-                        className="dash-glass rounded-2xl p-6 mb-10"
-                    >
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-sm font-mono tracking-widest uppercase text-amber-400 flex items-center gap-2">
-                                        <Wallet size={14} /> Budget Ledgers
-                                    </h3>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-xs font-mono text-gray-400">Income: <span className="text-emerald-400 font-bold">₹{Number(budgetSaved.income).toLocaleString()}</span></span>
-                                        <button
-                                            onClick={startEditBudget}
-                                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono tracking-widest uppercase hover:bg-cyan-500/20 transition-all"
-                                        >
-                                            <Edit2 size={12} /> Edit Budget
-                                        </button>
-                                    </div>
-                                </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                            {budgetSaved.ledgers.map((l, i) => {
-                                const savedAmount = l.amount || ((Number(budgetSaved.income) * Number(l.percent)) / 100);
-                                return (
-                                    <div key={i} className="dash-glass rounded-xl p-4 border border-amber-500/10">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-white font-medium text-sm truncate">{l.name}</span>
-                                            <span className="text-amber-400 font-mono text-xs shrink-0 ml-1">{l.percent}%</span>
-                                        </div>
-                                        <div className="text-xl font-bold text-amber-300 font-mono">₹{savedAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                                        <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                                            <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${Math.min(l.percent, 100)}%` }} />
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </motion.div>
-                )}
-
                 {/* Charts Overview */}
 
                 <motion.div
@@ -906,7 +867,7 @@ export default function MoneyPage() {
                 </motion.div>
 
                 {/* Transactions List */}
-                <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
+                <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
                     <h3 className="text-xl font-bold text-gray-200 flex items-center gap-2">
                         <Filter size={20} className="text-cyan-400" />
                         Ledger History
@@ -922,6 +883,72 @@ export default function MoneyPage() {
                         />
                     </div>
                 </div>
+
+                {/* Filter Panel */}
+                {(() => {
+                    const ledgerNames = budgetSaved?.ledgers?.map(l => l.name) || categories;
+                    const filtered = transactions.filter(t => {
+                        const matchSearch = !txSearch || t.title.toLowerCase().includes(txSearch.toLowerCase()) || (t.category || "").toLowerCase().includes(txSearch.toLowerCase());
+                        const matchLedger = !filterLedger || (t.category || "") === filterLedger;
+                        const matchFrom = !filterFrom || t.date >= filterFrom;
+                        const matchTo = !filterTo || t.date <= filterTo;
+                        return matchSearch && matchLedger && matchFrom && matchTo;
+                    });
+                    const filteredIncome = filtered.filter(t => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
+                    const filteredExpense = filtered.filter(t => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
+                    const isFiltered = filterLedger || filterFrom || filterTo;
+
+                    return (
+                        <>
+                            <div className="dash-glass rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-end">
+                                <div className="flex flex-col gap-1 min-w-[160px]">
+                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">Ledger</label>
+                                    <select
+                                        className="dash-input px-3 py-2 rounded-xl text-sm appearance-none"
+                                        value={filterLedger}
+                                        onChange={e => setFilterLedger(e.target.value)}
+                                        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1.2em 1.2em' }}
+                                    >
+                                        <option value="" className="bg-gray-900">All Ledgers</option>
+                                        {ledgerNames.map(n => <option key={n} value={n} className="bg-gray-900">{n}</option>)}
+                                    </select>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">From</label>
+                                    <input type="date" className="dash-input px-3 py-2 rounded-xl text-sm" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">To</label>
+                                    <input type="date" className="dash-input px-3 py-2 rounded-xl text-sm" value={filterTo} onChange={e => setFilterTo(e.target.value)} />
+                                </div>
+                                {isFiltered && (
+                                    <button
+                                        onClick={() => { setFilterLedger(""); setFilterFrom(""); setFilterTo(""); }}
+                                        className="px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono tracking-widest uppercase hover:bg-rose-500/20 transition-all flex items-center gap-1"
+                                    >
+                                        <X size={12} /> Clear
+                                    </button>
+                                )}
+                                {isFiltered && (
+                                    <div className="ml-auto flex gap-4 items-center">
+                                        <div className="text-center">
+                                            <p className="text-[10px] font-mono tracking-widest uppercase text-emerald-400/70">Income</p>
+                                            <p className="text-lg font-bold text-emerald-400 font-mono">₹{filteredIncome.toLocaleString()}</p>
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-[10px] font-mono tracking-widest uppercase text-rose-400/70">Expense</p>
+                                            <p className="text-lg font-bold text-rose-400 font-mono">₹{filteredExpense.toLocaleString()}</p>
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-[10px] font-mono tracking-widest uppercase text-cyan-400/70">Net</p>
+                                            <p className={`text-lg font-bold font-mono ${filteredIncome - filteredExpense >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>₹{(filteredIncome - filteredExpense).toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    );
+                })()}
                 {
                     loading ? (
                         <div className="flex justify-center py-20">
@@ -956,11 +983,13 @@ export default function MoneyPage() {
                             </div>
 
                             <div className="divide-y divide-white/5">
-                                {transactions.filter(t =>
-                                    !txSearch ||
-                                    t.title.toLowerCase().includes(txSearch.toLowerCase()) ||
-                                    (t.category || "").toLowerCase().includes(txSearch.toLowerCase())
-                                ).map((t) => (
+                                {transactions.filter(t => {
+                                    const matchSearch = !txSearch || t.title.toLowerCase().includes(txSearch.toLowerCase()) || (t.category || "").toLowerCase().includes(txSearch.toLowerCase());
+                                    const matchLedger = !filterLedger || (t.category || "") === filterLedger;
+                                    const matchFrom = !filterFrom || t.date >= filterFrom;
+                                    const matchTo = !filterTo || t.date <= filterTo;
+                                    return matchSearch && matchLedger && matchFrom && matchTo;
+                                }).map((t) => (
                                     <div key={t.id} className="p-4 md:grid md:grid-cols-12 md:gap-4 md:items-center hover:bg-white/[0.02] transition-colors group">
                                         <div className="hidden md:flex col-span-1 justify-center">
                                             {getTypeIcon(t.type)}
@@ -1321,9 +1350,9 @@ export default function MoneyPage() {
                                     />
                                 </div>
                                 <div>
-                                    <div className="flex items-center justify-between mb-3">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                                         <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">Ledgers (must total 100%)</label>
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-2 flex-wrap">
                                             <button
                                                 type="button"
                                                 onClick={loadCategoriesIntoBudget}
@@ -1342,14 +1371,26 @@ export default function MoneyPage() {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <div className="grid grid-cols-12 gap-2 text-xs font-mono tracking-widest uppercase text-gray-500 px-1 mb-3">
+                                        {/* Desktop header */}
+                                        <div className="hidden md:grid grid-cols-12 gap-2 text-xs font-mono tracking-widest uppercase text-gray-500 px-1 mb-3">
                                             <div className="col-span-6">Ledger Name</div>
                                             <div className="col-span-3 text-center">Amount (₹)</div>
                                             <div className="col-span-2 text-center">Percent</div>
                                             <div className="col-span-1"></div>
                                         </div>
                                         {budgetLedgers.map((l, i) => (
-                                            <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                                            <div key={i} className="flex flex-col md:grid md:grid-cols-12 gap-2 md:items-center p-3 md:p-0 rounded-xl md:rounded-none bg-white/[0.02] md:bg-transparent border border-white/5 md:border-0">
+                                                {/* Mobile label */}
+                                                <div className="flex items-center justify-between md:hidden mb-1">
+                                                    <span className="text-[10px] font-mono tracking-widest uppercase text-gray-500">Ledger {i + 1}</span>
+                                                    {budgetLedgers.length > 1 && (
+                                                        <button type="button" onClick={() => setBudgetLedgers(ls => ls.filter((_, j) => j !== i))}
+                                                            className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all"
+                                                        >
+                                                            <X size={12} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                                 <div className="col-span-6 relative">
                                                     <input
                                                         type="text" placeholder="Ledger name (e.g. Savings)"
@@ -1364,25 +1405,30 @@ export default function MoneyPage() {
                                                         ))}
                                                     </datalist>
                                                 </div>
-                                                <div className="col-span-3 relative">
-                                                    <input
-                                                        type="number" min="0" step="1" placeholder="Amount"
-                                                        className="dash-input w-full px-4 py-2.5 rounded-xl placeholder-gray-600 text-sm pr-8"
-                                                        value={l.amount}
-                                                        onChange={(e) => updateLedgerAmount(i, e.target.value)}
-                                                    />
-                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">₹</span>
+                                                <div className="flex gap-2 md:contents">
+                                                    <div className="col-span-3 relative flex-1">
+                                                        <label className="md:hidden text-[10px] font-mono tracking-widest uppercase text-gray-500 mb-1 block">Amount</label>
+                                                        <input
+                                                            type="number" min="0" step="1" placeholder="Amount"
+                                                            className="dash-input w-full px-4 py-2.5 rounded-xl placeholder-gray-600 text-sm pr-8"
+                                                            value={l.amount}
+                                                            onChange={(e) => updateLedgerAmount(i, e.target.value)}
+                                                        />
+                                                        <span className="absolute right-3 bottom-2.5 text-gray-500 text-xs">₹</span>
+                                                    </div>
+                                                    <div className="col-span-2 relative flex-1">
+                                                        <label className="md:hidden text-[10px] font-mono tracking-widest uppercase text-gray-500 mb-1 block">Percent</label>
+                                                        <input
+                                                            type="number" min="0" max="100" step="0.1" placeholder="%"
+                                                            className="dash-input w-full px-3 py-2.5 rounded-xl placeholder-gray-600 text-sm pr-6"
+                                                            value={l.percent}
+                                                            onChange={(e) => updateLedgerPercent(i, e.target.value)}
+                                                        />
+                                                        <span className="absolute right-2 bottom-2.5 text-gray-500 text-xs">%</span>
+                                                    </div>
                                                 </div>
-                                                <div className="col-span-2 relative">
-                                                    <input
-                                                        type="number" min="0" max="100" step="0.1" placeholder="%"
-                                                        className="dash-input w-full px-3 py-2.5 rounded-xl placeholder-gray-600 text-sm pr-6"
-                                                        value={l.percent}
-                                                        onChange={(e) => updateLedgerPercent(i, e.target.value)}
-                                                    />
-                                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">%</span>
-                                                </div>
-                                                <div className="col-span-1 flex justify-center">
+                                                {/* Desktop delete */}
+                                                <div className="col-span-1 hidden md:flex justify-center">
                                                     {budgetLedgers.length > 1 && (
                                                         <button type="button" onClick={() => setBudgetLedgers(ls => ls.filter((_, j) => j !== i))}
                                                             className="p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all"
