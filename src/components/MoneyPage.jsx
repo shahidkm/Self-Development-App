@@ -38,7 +38,7 @@ export default function MoneyPage() {
     };
     const [showCompleted, setShowCompleted] = useState(false);
     const [txSearch, setTxSearch] = useState("");
-    const [filterLedger, setFilterLedger] = useState("");
+    const [filterLedgers, setFilterLedgers] = useState([]);
     const [filterFrom, setFilterFrom] = useState("");
     const [filterTo, setFilterTo] = useState("");
     const [budgetIncome, setBudgetIncome] = useState("");
@@ -889,29 +889,39 @@ export default function MoneyPage() {
                     const ledgerNames = budgetSaved?.ledgers?.map(l => l.name) || categories;
                     const filtered = transactions.filter(t => {
                         const matchSearch = !txSearch || t.title.toLowerCase().includes(txSearch.toLowerCase()) || (t.category || "").toLowerCase().includes(txSearch.toLowerCase());
-                        const matchLedger = !filterLedger || (t.category || "") === filterLedger;
+                        const matchLedger = filterLedgers.length === 0 || filterLedgers.includes(t.category || "");
                         const matchFrom = !filterFrom || t.date >= filterFrom;
                         const matchTo = !filterTo || t.date <= filterTo;
                         return matchSearch && matchLedger && matchFrom && matchTo;
                     });
                     const filteredIncome = filtered.filter(t => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
                     const filteredExpense = filtered.filter(t => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
-                    const isFiltered = filterLedger || filterFrom || filterTo;
+                    const isFiltered = filterLedgers.length > 0 || filterFrom || filterTo;
 
                     return (
                         <>
                             <div className="dash-glass rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-end">
-                                <div className="flex flex-col gap-1 min-w-[160px]">
-                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">Ledger</label>
-                                    <select
-                                        className="dash-input px-3 py-2 rounded-xl text-sm appearance-none"
-                                        value={filterLedger}
-                                        onChange={e => setFilterLedger(e.target.value)}
-                                        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1.2em 1.2em' }}
-                                    >
-                                        <option value="" className="bg-gray-900">All Ledgers</option>
-                                        {ledgerNames.map(n => <option key={n} value={n} className="bg-gray-900">{n}</option>)}
-                                    </select>
+                                <div className="flex flex-col gap-2 w-full">
+                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">Ledgers</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {ledgerNames.map(n => {
+                                            const active = filterLedgers.includes(n);
+                                            return (
+                                                <button
+                                                    key={n}
+                                                    type="button"
+                                                    onClick={() => setFilterLedgers(prev => active ? prev.filter(x => x !== n) : [...prev, n])}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-widest uppercase border transition-all ${
+                                                        active
+                                                            ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-300"
+                                                            : "bg-white/5 border-white/10 text-gray-400 hover:border-cyan-500/30 hover:text-gray-200"
+                                                    }`}
+                                                >
+                                                    {n}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                                 <div className="flex flex-col gap-1">
                                     <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">From</label>
@@ -923,7 +933,7 @@ export default function MoneyPage() {
                                 </div>
                                 {isFiltered && (
                                     <button
-                                        onClick={() => { setFilterLedger(""); setFilterFrom(""); setFilterTo(""); }}
+                                        onClick={() => { setFilterLedgers([]); setFilterFrom(""); setFilterTo(""); }}
                                         className="px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono tracking-widest uppercase hover:bg-rose-500/20 transition-all flex items-center gap-1"
                                     >
                                         <X size={12} /> Clear
@@ -985,7 +995,7 @@ export default function MoneyPage() {
                             <div className="divide-y divide-white/5">
                                 {transactions.filter(t => {
                                     const matchSearch = !txSearch || t.title.toLowerCase().includes(txSearch.toLowerCase()) || (t.category || "").toLowerCase().includes(txSearch.toLowerCase());
-                                    const matchLedger = !filterLedger || (t.category || "") === filterLedger;
+                                    const matchLedger = filterLedgers.length === 0 || filterLedgers.includes(t.category || "");
                                     const matchFrom = !filterFrom || t.date >= filterFrom;
                                     const matchTo = !filterTo || t.date <= filterTo;
                                     return matchSearch && matchLedger && matchFrom && matchTo;
