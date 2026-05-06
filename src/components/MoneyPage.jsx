@@ -886,41 +886,69 @@ export default function MoneyPage() {
 
                 {/* Filter Panel */}
                 {(() => {
-                    const ledgerNames = budgetSaved?.ledgers?.map(l => l.name) || categories;
+                    const txCategories = [...new Set(transactions.map(t => t.category).filter(Boolean))];
+                    const ledgerNames = [...new Set([
+                        ...(budgetSaved?.ledgers?.map(l => l.name) || []),
+                        ...categories,
+                        ...txCategories
+                    ])];
                     const filtered = transactions.filter(t => {
                         const matchSearch = !txSearch || t.title.toLowerCase().includes(txSearch.toLowerCase()) || (t.category || "").toLowerCase().includes(txSearch.toLowerCase());
-                        const matchLedger = filterLedgers.length === 0 || filterLedgers.includes(t.category || "");
+                        const activeLedgers = filterLedgers.filter(x => x !== '__open');
+                        const matchLedger = activeLedgers.length === 0 || activeLedgers.includes(t.category || "");
                         const matchFrom = !filterFrom || t.date >= filterFrom;
                         const matchTo = !filterTo || t.date <= filterTo;
                         return matchSearch && matchLedger && matchFrom && matchTo;
                     });
                     const filteredIncome = filtered.filter(t => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
                     const filteredExpense = filtered.filter(t => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
-                    const isFiltered = filterLedgers.length > 0 || filterFrom || filterTo;
+                    const isFiltered = filterLedgers.filter(x => x !== '__open').length > 0 || filterFrom || filterTo;
 
                     return (
                         <>
                             <div className="dash-glass rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-end">
-                                <div className="flex flex-col gap-2 w-full">
-                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">Ledgers</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {ledgerNames.map(n => {
-                                            const active = filterLedgers.includes(n);
-                                            return (
-                                                <button
-                                                    key={n}
-                                                    type="button"
-                                                    onClick={() => setFilterLedgers(prev => active ? prev.filter(x => x !== n) : [...prev, n])}
-                                                    className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-widest uppercase border transition-all ${
-                                                        active
-                                                            ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-300"
-                                                            : "bg-white/5 border-white/10 text-gray-400 hover:border-cyan-500/30 hover:text-gray-200"
-                                                    }`}
-                                                >
-                                                    {n}
-                                                </button>
-                                            );
-                                        })}
+                                <div className="flex flex-col gap-1 min-w-[200px] relative">
+                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">Ledger</label>
+                                    <div className="relative">
+                                        <div
+                                            className="dash-input px-3 py-2 rounded-xl text-sm cursor-pointer flex items-center justify-between gap-2 min-h-[38px]"
+                                            onClick={() => setFilterLedgers(prev => prev.__open ? prev.filter(x => x !== '__open') : [...prev, '__open'])}
+                                        >
+                                            <span className={filterLedgers.filter(x => x !== '__open').length ? 'text-cyan-300' : 'text-gray-500'}>
+                                                {filterLedgers.filter(x => x !== '__open').length
+                                                    ? filterLedgers.filter(x => x !== '__open').join(', ')
+                                                    : 'All Ledgers'}
+                                            </span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="#64748b" strokeWidth="2" className="w-4 h-4 shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                                        </div>
+                                        {filterLedgers.includes('__open') && (
+                                            <>
+                                                <div className="fixed inset-0 z-40" onClick={() => setFilterLedgers(prev => prev.filter(x => x !== '__open'))} />
+                                                <div className="absolute z-50 top-full mt-1 left-0 w-full dash-glass rounded-xl border border-white/10 overflow-hidden shadow-xl">
+                                                {ledgerNames.map(n => {
+                                                    const checked = filterLedgers.filter(x => x !== '__open').includes(n);
+                                                    return (
+                                                        <div
+                                                            key={n}
+                                                            onClick={() => setFilterLedgers(prev => {
+                                                                const active = prev.filter(x => x !== '__open');
+                                                                const next = checked ? active.filter(x => x !== n) : [...active, n];
+                                                                return [...next, '__open'];
+                                                            })}
+                                                            className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors"
+                                                        >
+                                                            <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
+                                                                checked ? 'bg-cyan-500/30 border-cyan-500/60' : 'border-white/20 bg-white/5'
+                                                            }`}>
+                                                                {checked && <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#67e8f9" strokeWidth="3" className="w-2.5 h-2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                            </div>
+                                                            <span className={`text-xs font-mono tracking-widest uppercase ${checked ? 'text-cyan-300' : 'text-gray-400'}`}>{n}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex flex-col gap-1">
@@ -995,7 +1023,7 @@ export default function MoneyPage() {
                             <div className="divide-y divide-white/5">
                                 {transactions.filter(t => {
                                     const matchSearch = !txSearch || t.title.toLowerCase().includes(txSearch.toLowerCase()) || (t.category || "").toLowerCase().includes(txSearch.toLowerCase());
-                                    const matchLedger = filterLedgers.length === 0 || filterLedgers.includes(t.category || "");
+                                    const matchLedger = filterLedgers.filter(x => x !== '__open').length === 0 || filterLedgers.filter(x => x !== '__open').includes(t.category || "");
                                     const matchFrom = !filterFrom || t.date >= filterFrom;
                                     const matchTo = !filterTo || t.date <= filterTo;
                                     return matchSearch && matchLedger && matchFrom && matchTo;
