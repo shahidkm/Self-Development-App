@@ -906,80 +906,88 @@ export default function MoneyPage() {
 
                     return (
                         <>
-                            <div className="dash-glass rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-end">
-                                <div className="flex flex-col gap-1 min-w-[200px] relative">
-                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">Ledger</label>
-                                    <div className="relative">
-                                        <div
-                                            className="dash-input px-3 py-2 rounded-xl text-sm cursor-pointer flex items-center justify-between gap-2 min-h-[38px]"
-                                            onClick={() => setFilterLedgers(prev => prev.__open ? prev.filter(x => x !== '__open') : [...prev, '__open'])}
-                                        >
-                                            <span className={filterLedgers.filter(x => x !== '__open').length ? 'text-cyan-300' : 'text-gray-500'}>
-                                                {filterLedgers.filter(x => x !== '__open').length
-                                                    ? filterLedgers.filter(x => x !== '__open').join(', ')
-                                                    : 'All Ledgers'}
-                                            </span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="#64748b" strokeWidth="2" className="w-4 h-4 shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-                                        </div>
-                                        {filterLedgers.includes('__open') && (
-                                            <>
-                                                <div className="fixed inset-0 z-40" onClick={() => setFilterLedgers(prev => prev.filter(x => x !== '__open'))} />
-                                                <div className="absolute z-50 top-full mt-1 left-0 w-full dash-glass rounded-xl border border-white/10 overflow-hidden shadow-xl">
-                                                {ledgerNames.map(n => {
-                                                    const checked = filterLedgers.filter(x => x !== '__open').includes(n);
-                                                    return (
-                                                        <div
-                                                            key={n}
-                                                            onClick={() => setFilterLedgers(prev => {
-                                                                const active = prev.filter(x => x !== '__open');
-                                                                const next = checked ? active.filter(x => x !== n) : [...active, n];
-                                                                return [...next, '__open'];
-                                                            })}
-                                                            className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors"
-                                                        >
-                                                            <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
-                                                                checked ? 'bg-cyan-500/30 border-cyan-500/60' : 'border-white/20 bg-white/5'
-                                                            }`}>
-                                                                {checked && <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#67e8f9" strokeWidth="3" className="w-2.5 h-2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                                                            </div>
-                                                            <span className={`text-xs font-mono tracking-widest uppercase ${checked ? 'text-cyan-300' : 'text-gray-400'}`}>{n}</span>
-                                                        </div>
-                                                    );
-                                                })}
+                            <div className="dash-glass rounded-2xl p-4 mb-4">
+                                {/* Row 1: Ledger + dates + clear */}
+                                <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-end">
+                                    <div className="flex flex-col gap-1 w-full sm:w-auto sm:min-w-[200px] relative">
+                                        <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">Ledger</label>
+                                        <div className="relative">
+                                            <div
+                                                className="dash-input px-3 py-2 rounded-xl text-sm cursor-pointer flex items-center justify-between gap-2 min-h-[38px]"
+                                                onClick={() => setFilterLedgers(prev => prev.includes('__open') ? prev.filter(x => x !== '__open') : [...prev, '__open'])}
+                                            >
+                                                <span className={`truncate ${filterLedgers.filter(x => x !== '__open').length ? 'text-cyan-300' : 'text-gray-500'}`}>
+                                                    {filterLedgers.filter(x => x !== '__open').length
+                                                        ? filterLedgers.filter(x => x !== '__open').join(', ')
+                                                        : 'All Ledgers'}
+                                                </span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="#64748b" strokeWidth="2" className="w-4 h-4 shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                                             </div>
-                                            </>
+                                            {filterLedgers.includes('__open') && (
+                                                <>
+                                                    <div className="fixed inset-0 z-40" onClick={() => setFilterLedgers(prev => prev.filter(x => x !== '__open'))} />
+                                                    <div className="absolute z-50 top-full mt-1 left-0 w-full min-w-[180px] dash-glass rounded-xl border border-white/10 overflow-hidden shadow-xl">
+                                                        {ledgerNames.map(n => {
+                                                            const checked = filterLedgers.filter(x => x !== '__open').includes(n);
+                                                            return (
+                                                                <div
+                                                                    key={n}
+                                                                    onClick={() => setFilterLedgers(prev => {
+                                                                        const active = prev.filter(x => x !== '__open');
+                                                                        const next = checked ? active.filter(x => x !== n) : [...active, n];
+                                                                        return [...next, '__open'];
+                                                                    })}
+                                                                    className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-white/5 transition-colors"
+                                                                >
+                                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
+                                                                        checked ? 'bg-cyan-500/30 border-cyan-500/60' : 'border-white/20 bg-white/5'
+                                                                    }`}>
+                                                                        {checked && <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#67e8f9" strokeWidth="3" className="w-2.5 h-2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                                    </div>
+                                                                    <span className={`text-xs font-mono tracking-widest uppercase ${checked ? 'text-cyan-300' : 'text-gray-400'}`}>{n}</span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-3 flex-1 flex-wrap">
+                                        <div className="flex flex-col gap-1 flex-1 min-w-[130px]">
+                                            <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">From</label>
+                                            <input type="date" className="dash-input px-3 py-2 rounded-xl text-sm w-full" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} />
+                                        </div>
+                                        <div className="flex flex-col gap-1 flex-1 min-w-[130px]">
+                                            <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">To</label>
+                                            <input type="date" className="dash-input px-3 py-2 rounded-xl text-sm w-full" value={filterTo} onChange={e => setFilterTo(e.target.value)} />
+                                        </div>
+                                        {isFiltered && (
+                                            <div className="flex items-end">
+                                                <button
+                                                    onClick={() => { setFilterLedgers([]); setFilterFrom(""); setFilterTo(""); }}
+                                                    className="px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono tracking-widest uppercase hover:bg-rose-500/20 transition-all flex items-center gap-1"
+                                                >
+                                                    <X size={12} /> Clear
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">From</label>
-                                    <input type="date" className="dash-input px-3 py-2 rounded-xl text-sm" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} />
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">To</label>
-                                    <input type="date" className="dash-input px-3 py-2 rounded-xl text-sm" value={filterTo} onChange={e => setFilterTo(e.target.value)} />
-                                </div>
+                                {/* Row 2: Totals (only when filtered) */}
                                 {isFiltered && (
-                                    <button
-                                        onClick={() => { setFilterLedgers([]); setFilterFrom(""); setFilterTo(""); }}
-                                        className="px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono tracking-widest uppercase hover:bg-rose-500/20 transition-all flex items-center gap-1"
-                                    >
-                                        <X size={12} /> Clear
-                                    </button>
-                                )}
-                                {isFiltered && (
-                                    <div className="ml-auto flex gap-4 items-center">
+                                    <div className="mt-3 pt-3 border-t border-white/5 grid grid-cols-3 gap-2">
                                         <div className="text-center">
                                             <p className="text-[10px] font-mono tracking-widest uppercase text-emerald-400/70">Income</p>
-                                            <p className="text-lg font-bold text-emerald-400 font-mono">₹{filteredIncome.toLocaleString()}</p>
+                                            <p className="text-base font-bold text-emerald-400 font-mono">₹{filteredIncome.toLocaleString()}</p>
                                         </div>
                                         <div className="text-center">
                                             <p className="text-[10px] font-mono tracking-widest uppercase text-rose-400/70">Expense</p>
-                                            <p className="text-lg font-bold text-rose-400 font-mono">₹{filteredExpense.toLocaleString()}</p>
+                                            <p className="text-base font-bold text-rose-400 font-mono">₹{filteredExpense.toLocaleString()}</p>
                                         </div>
                                         <div className="text-center">
                                             <p className="text-[10px] font-mono tracking-widest uppercase text-cyan-400/70">Net</p>
-                                            <p className={`text-lg font-bold font-mono ${filteredIncome - filteredExpense >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>₹{(filteredIncome - filteredExpense).toLocaleString()}</p>
+                                            <p className={`text-base font-bold font-mono ${filteredIncome - filteredExpense >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>₹{(filteredIncome - filteredExpense).toLocaleString()}</p>
                                         </div>
                                     </div>
                                 )}
