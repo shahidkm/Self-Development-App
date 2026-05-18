@@ -34,6 +34,7 @@ const NAV_GROUPS = [
       { label: "Manners",       path: "/manners",   Icon: Heart },
       { label: "Gallery",       path: "/gallery",   Icon: Images },
       { label: "Workout Diet",  path: "/workout-diet", Icon: Utensils },
+      { label: "Gym Tracker",    path: "/gym",          Icon: Dumbbell },
     ],
   },
   {
