@@ -9,7 +9,7 @@ import {
   Medal, Zap, Swords, Users, Wallet, Star, ScrollText,
   Brain, Activity, Trophy, ChevronDown, Menu, X,
   GraduationCap, Gem, Clock, Heart, Images, Mic2, Shield, Bot, FileText, Briefcase,
-  Search, Settings, Utensils
+  Search, Settings, Utensils, Dumbbell
 } from "lucide-react";
 
 // ─── All nav groups with every route ──────────────────────────────────────
