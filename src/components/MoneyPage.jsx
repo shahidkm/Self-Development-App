@@ -38,6 +38,9 @@ export default function MoneyPage() {
     };
     const [showCompleted, setShowCompleted] = useState(false);
     const [txSearch, setTxSearch] = useState("");
+    const [filterLedgers, setFilterLedgers] = useState([]);
+    const [filterFrom, setFilterFrom] = useState("");
+    const [filterTo, setFilterTo] = useState("");
     const [budgetIncome, setBudgetIncome] = useState("");
     const [budgetLedgers, setBudgetLedgers] = useState([{ name: "", percent: "", amount: "" }]);
     const [budgetSaved, setBudgetSaved] = useState(null);
@@ -592,6 +595,16 @@ export default function MoneyPage() {
                     >
                         <span className="flex items-center gap-2"><Eye size={13} /> Budget View</span>
                     </button>
+                    <button
+                        onClick={() => setActiveTab("ledger-filter")}
+                        className={`px-5 py-2 rounded-lg text-xs font-mono tracking-widest uppercase transition-all ${
+                            activeTab === "ledger-filter"
+                                ? "bg-gradient-to-r from-cyan-500/30 to-indigo-500/30 text-cyan-300 border border-cyan-500/30"
+                                : "text-gray-500 hover:text-gray-300"
+                        }`}
+                    >
+                        <span className="flex items-center gap-2"><Filter size={13} /> Ledger Filter</span>
+                    </button>
                 </div>
 
                 {activeTab === "transactions" && <>
@@ -810,48 +823,6 @@ export default function MoneyPage() {
                     </div>
                 )}
 
-                {/* Budget Ledgers */}
-                {budgetSaved && (
-                    <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.25 }}
-                        className="dash-glass rounded-2xl p-6 mb-10"
-                    >
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-sm font-mono tracking-widest uppercase text-amber-400 flex items-center gap-2">
-                                        <Wallet size={14} /> Budget Ledgers
-                                    </h3>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-xs font-mono text-gray-400">Income: <span className="text-emerald-400 font-bold">₹{Number(budgetSaved.income).toLocaleString()}</span></span>
-                                        <button
-                                            onClick={startEditBudget}
-                                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono tracking-widest uppercase hover:bg-cyan-500/20 transition-all"
-                                        >
-                                            <Edit2 size={12} /> Edit Budget
-                                        </button>
-                                    </div>
-                                </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                            {budgetSaved.ledgers.map((l, i) => {
-                                const savedAmount = l.amount || ((Number(budgetSaved.income) * Number(l.percent)) / 100);
-                                return (
-                                    <div key={i} className="dash-glass rounded-xl p-4 border border-amber-500/10">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-white font-medium text-sm truncate">{l.name}</span>
-                                            <span className="text-amber-400 font-mono text-xs shrink-0 ml-1">{l.percent}%</span>
-                                        </div>
-                                        <div className="text-xl font-bold text-amber-300 font-mono">₹{savedAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                                        <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                                            <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500" style={{ width: `${Math.min(l.percent, 100)}%` }} />
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </motion.div>
-                )}
-
                 {/* Charts Overview */}
 
                 <motion.div
@@ -956,11 +927,13 @@ export default function MoneyPage() {
                             </div>
 
                             <div className="divide-y divide-white/5">
-                                {transactions.filter(t =>
-                                    !txSearch ||
-                                    t.title.toLowerCase().includes(txSearch.toLowerCase()) ||
-                                    (t.category || "").toLowerCase().includes(txSearch.toLowerCase())
-                                ).map((t) => (
+                                {transactions.filter(t => {
+                                    const matchSearch = !txSearch || t.title.toLowerCase().includes(txSearch.toLowerCase()) || (t.category || "").toLowerCase().includes(txSearch.toLowerCase());
+                                    const matchLedger = filterLedgers.filter(x => x !== '__open').length === 0 || filterLedgers.filter(x => x !== '__open').includes(t.category || "");
+                                    const matchFrom = !filterFrom || t.date >= filterFrom;
+                                    const matchTo = !filterTo || t.date <= filterTo;
+                                    return matchSearch && matchLedger && matchFrom && matchTo;
+                                }).map((t) => (
                                     <div key={t.id} className="p-4 md:grid md:grid-cols-12 md:gap-4 md:items-center hover:bg-white/[0.02] transition-colors group">
                                         <div className="hidden md:flex col-span-1 justify-center">
                                             {getTypeIcon(t.type)}
@@ -1018,6 +991,167 @@ export default function MoneyPage() {
                 }
                 </>
                 }
+
+                {activeTab === "ledger-filter" && (() => {
+                    const txCategories = [...new Set(transactions.map(t => t.category).filter(Boolean))];
+                    const ledgerNames = [...new Set([
+                        ...(budgetSaved?.ledgers?.map(l => l.name) || []),
+                        ...categories,
+                        ...txCategories
+                    ])];
+                    const activeLedgers = filterLedgers.filter(x => x !== '__open');
+                    const toggle = (n) => setFilterLedgers(prev => {
+                        const active = prev.filter(x => x !== '__open');
+                        return active.includes(n) ? active.filter(x => x !== n) : [...active, n];
+                    });
+
+                    const matchDate = (t) => (!filterFrom || t.date >= filterFrom) && (!filterTo || t.date <= filterTo);
+
+                    const totalIncome = activeLedgers.reduce((sum, ledger) => {
+                        return sum + transactions.filter(t => (t.category || '') === ledger && t.type === 'income' && matchDate(t)).reduce((s, t) => s + Number(t.amount), 0);
+                    }, 0);
+                    const totalExpense = activeLedgers.reduce((sum, ledger) => {
+                        return sum + transactions.filter(t => (t.category || '') === ledger && t.type === 'expense' && matchDate(t)).reduce((s, t) => s + Number(t.amount), 0);
+                    }, 0);
+
+                    return (
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
+                            <div className="text-center mb-8">
+                                <div className="inline-flex items-center justify-center p-4 dash-glass rounded-2xl mb-4 text-cyan-400 border border-cyan-500/30 shadow-[0_0_20px_rgba(34,211,238,0.2)]">
+                                    <Filter size={42} strokeWidth={2} />
+                                </div>
+                                <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-100 via-white to-gray-400 mb-2 tracking-wide">Ledger Filter</h1>
+                                <p className="text-cyan-400/60 font-mono text-sm tracking-widest uppercase">Select ledgers to view totals</p>
+                            </div>
+
+                            {/* Date range */}
+                            <div className="dash-glass rounded-2xl p-5 mb-4">
+                                <p className="text-[10px] font-mono tracking-widest uppercase text-gray-400 mb-3">Date Range</p>
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <div className="flex flex-col gap-1 flex-1">
+                                        <label className="text-[10px] font-mono tracking-widest uppercase text-gray-500">From</label>
+                                        <input type="date" className="dash-input px-3 py-2 rounded-xl text-sm w-full" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} />
+                                    </div>
+                                    <div className="flex flex-col gap-1 flex-1">
+                                        <label className="text-[10px] font-mono tracking-widest uppercase text-gray-500">To</label>
+                                        <input type="date" className="dash-input px-3 py-2 rounded-xl text-sm w-full" value={filterTo} onChange={e => setFilterTo(e.target.value)} />
+                                    </div>
+                                    {(filterFrom || filterTo) && (
+                                        <div className="flex items-end">
+                                            <button onClick={() => { setFilterFrom(''); setFilterTo(''); }}
+                                                className="px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono tracking-widest uppercase hover:bg-rose-500/20 transition-all flex items-center gap-1"
+                                            >
+                                                <X size={12} /> Clear
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Ledger pill toggles */}
+                            <div className="dash-glass rounded-2xl p-5 mb-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <p className="text-[10px] font-mono tracking-widest uppercase text-gray-400">Select Ledgers</p>
+                                    {activeLedgers.length > 0 && (
+                                        <button onClick={() => setFilterLedgers([])}
+                                            className="text-[10px] font-mono tracking-widest uppercase text-rose-400 hover:text-rose-300 transition-colors flex items-center gap-1"
+                                        >
+                                            <X size={10} /> Clear all
+                                        </button>
+                                    )}
+                                </div>
+                                {ledgerNames.length === 0 ? (
+                                    <p className="text-gray-500 font-mono text-xs">No ledgers found. Add transactions with categories first.</p>
+                                ) : (
+                                    <div className="flex flex-wrap gap-2">
+                                        {ledgerNames.map(n => {
+                                            const active = activeLedgers.includes(n);
+                                            const txCount = transactions.filter(t => (t.category || '') === n).length;
+                                            return (
+                                                <button key={n} onClick={() => toggle(n)}
+                                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono tracking-widest uppercase border transition-all ${
+                                                        active
+                                                            ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.15)]'
+                                                            : 'bg-white/5 border-white/10 text-gray-400 hover:border-cyan-500/30 hover:text-gray-200'
+                                                    }`}
+                                                >
+                                                    {active && <CheckCircle2 size={11} className="text-cyan-400" />}
+                                                    {n}
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${active ? 'bg-cyan-500/20 text-cyan-400' : 'bg-white/10 text-gray-500'}`}>{txCount}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Per-ledger cards */}
+                            {activeLedgers.length === 0 ? (
+                                <div className="text-center py-16 dash-glass rounded-3xl">
+                                    <Filter className="mx-auto text-gray-600 mb-4" size={48} strokeWidth={1.5} />
+                                    <p className="text-gray-500 font-mono text-xs tracking-widest uppercase">Select ledgers above to view totals</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                                        {activeLedgers.map((ledger, idx) => {
+                                            const txns = transactions.filter(t => (t.category || '') === ledger && matchDate(t));
+                                            const inc = txns.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
+                                            const exp = txns.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+                                            const net = inc - exp;
+                                            const color = NEON_COLORS[idx % NEON_COLORS.length];
+                                            return (
+                                                <div key={ledger} className="dash-glass rounded-2xl p-5 border border-white/10 relative overflow-hidden">
+                                                    <div className="absolute top-0 left-0 w-full h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} />
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <h3 className="font-mono tracking-widest uppercase text-sm font-bold truncate" style={{ color }}>{ledger}</h3>
+                                                        <span className="text-[10px] font-mono text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">{txns.length} txn{txns.length !== 1 ? 's' : ''}</span>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-xs font-mono text-emerald-400/70 uppercase tracking-widest">Income</span>
+                                                            <span className="text-base font-bold text-emerald-400 font-mono">₹{inc.toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-xs font-mono text-rose-400/70 uppercase tracking-widest">Expense</span>
+                                                            <span className="text-base font-bold text-rose-400 font-mono">₹{exp.toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="pt-2 border-t border-white/5 flex justify-between items-center">
+                                                            <span className="text-xs font-mono text-gray-400 uppercase tracking-widest">Net</span>
+                                                            <span className={`text-xl font-bold font-mono ${net >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>₹{net.toLocaleString()}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Combined totals */}
+                                    {activeLedgers.length > 1 && (
+                                        <div className="dash-glass rounded-2xl p-5 border border-cyan-500/20 relative overflow-hidden">
+                                            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-cyan-500/0 via-cyan-500 to-cyan-500/0" />
+                                            <p className="text-[10px] font-mono tracking-widest uppercase text-cyan-400/70 mb-4">Combined Total — {activeLedgers.length} Ledgers</p>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <div className="text-center">
+                                                    <p className="text-[10px] font-mono tracking-widest uppercase text-emerald-400/70 mb-1">Total Income</p>
+                                                    <p className="text-2xl font-bold text-emerald-400 font-mono">₹{totalIncome.toLocaleString()}</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-[10px] font-mono tracking-widest uppercase text-rose-400/70 mb-1">Total Expense</p>
+                                                    <p className="text-2xl font-bold text-rose-400 font-mono">₹{totalExpense.toLocaleString()}</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-[10px] font-mono tracking-widest uppercase text-cyan-400/70 mb-1">Net Balance</p>
+                                                    <p className={`text-2xl font-bold font-mono ${totalIncome - totalExpense >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>₹{(totalIncome - totalExpense).toLocaleString()}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </motion.div>
+                    );
+                })()}
 
                 {activeTab === "budget-view" && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
@@ -1321,9 +1455,9 @@ export default function MoneyPage() {
                                     />
                                 </div>
                                 <div>
-                                    <div className="flex items-center justify-between mb-3">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                                         <label className="text-[10px] font-mono tracking-widest uppercase text-gray-400">Ledgers (must total 100%)</label>
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-2 flex-wrap">
                                             <button
                                                 type="button"
                                                 onClick={loadCategoriesIntoBudget}
@@ -1342,14 +1476,26 @@ export default function MoneyPage() {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <div className="grid grid-cols-12 gap-2 text-xs font-mono tracking-widest uppercase text-gray-500 px-1 mb-3">
+                                        {/* Desktop header */}
+                                        <div className="hidden md:grid grid-cols-12 gap-2 text-xs font-mono tracking-widest uppercase text-gray-500 px-1 mb-3">
                                             <div className="col-span-6">Ledger Name</div>
                                             <div className="col-span-3 text-center">Amount (₹)</div>
                                             <div className="col-span-2 text-center">Percent</div>
                                             <div className="col-span-1"></div>
                                         </div>
                                         {budgetLedgers.map((l, i) => (
-                                            <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                                            <div key={i} className="flex flex-col md:grid md:grid-cols-12 gap-2 md:items-center p-3 md:p-0 rounded-xl md:rounded-none bg-white/[0.02] md:bg-transparent border border-white/5 md:border-0">
+                                                {/* Mobile label */}
+                                                <div className="flex items-center justify-between md:hidden mb-1">
+                                                    <span className="text-[10px] font-mono tracking-widest uppercase text-gray-500">Ledger {i + 1}</span>
+                                                    {budgetLedgers.length > 1 && (
+                                                        <button type="button" onClick={() => setBudgetLedgers(ls => ls.filter((_, j) => j !== i))}
+                                                            className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all"
+                                                        >
+                                                            <X size={12} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                                 <div className="col-span-6 relative">
                                                     <input
                                                         type="text" placeholder="Ledger name (e.g. Savings)"
@@ -1364,25 +1510,30 @@ export default function MoneyPage() {
                                                         ))}
                                                     </datalist>
                                                 </div>
-                                                <div className="col-span-3 relative">
-                                                    <input
-                                                        type="number" min="0" step="1" placeholder="Amount"
-                                                        className="dash-input w-full px-4 py-2.5 rounded-xl placeholder-gray-600 text-sm pr-8"
-                                                        value={l.amount}
-                                                        onChange={(e) => updateLedgerAmount(i, e.target.value)}
-                                                    />
-                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">₹</span>
+                                                <div className="flex gap-2 md:contents">
+                                                    <div className="col-span-3 relative flex-1">
+                                                        <label className="md:hidden text-[10px] font-mono tracking-widest uppercase text-gray-500 mb-1 block">Amount</label>
+                                                        <input
+                                                            type="number" min="0" step="1" placeholder="Amount"
+                                                            className="dash-input w-full px-4 py-2.5 rounded-xl placeholder-gray-600 text-sm pr-8"
+                                                            value={l.amount}
+                                                            onChange={(e) => updateLedgerAmount(i, e.target.value)}
+                                                        />
+                                                        <span className="absolute right-3 bottom-2.5 text-gray-500 text-xs">₹</span>
+                                                    </div>
+                                                    <div className="col-span-2 relative flex-1">
+                                                        <label className="md:hidden text-[10px] font-mono tracking-widest uppercase text-gray-500 mb-1 block">Percent</label>
+                                                        <input
+                                                            type="number" min="0" max="100" step="0.1" placeholder="%"
+                                                            className="dash-input w-full px-3 py-2.5 rounded-xl placeholder-gray-600 text-sm pr-6"
+                                                            value={l.percent}
+                                                            onChange={(e) => updateLedgerPercent(i, e.target.value)}
+                                                        />
+                                                        <span className="absolute right-2 bottom-2.5 text-gray-500 text-xs">%</span>
+                                                    </div>
                                                 </div>
-                                                <div className="col-span-2 relative">
-                                                    <input
-                                                        type="number" min="0" max="100" step="0.1" placeholder="%"
-                                                        className="dash-input w-full px-3 py-2.5 rounded-xl placeholder-gray-600 text-sm pr-6"
-                                                        value={l.percent}
-                                                        onChange={(e) => updateLedgerPercent(i, e.target.value)}
-                                                    />
-                                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">%</span>
-                                                </div>
-                                                <div className="col-span-1 flex justify-center">
+                                                {/* Desktop delete */}
+                                                <div className="col-span-1 hidden md:flex justify-center">
                                                     {budgetLedgers.length > 1 && (
                                                         <button type="button" onClick={() => setBudgetLedgers(ls => ls.filter((_, j) => j !== i))}
                                                             className="p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all"

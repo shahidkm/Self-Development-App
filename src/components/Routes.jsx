@@ -30,6 +30,7 @@ import SettingsPage from "./SettingsPage";
 
 import JobFinder from "./JobFinder";
 import WorkoutDiet from "./WorkoutDiet";
+import GymTracker from "./GymTracker";
 
 function RoutesConfig() {
     return (
@@ -64,6 +65,7 @@ function RoutesConfig() {
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/job-finder" element={<JobFinder />} />
                 <Route path="/workout-diet" element={<WorkoutDiet />} />
+                <Route path="/gym" element={<GymTracker />} />
             </Routes>
         </Router>
     );
