@@ -17,68 +17,88 @@ const TODAY = new Date().toISOString().split('T')[0];
 
 // hour range when each meal is "current"
 const MEAL_HOURS = {
-  'Pre-Workout':           [5, 8],
-  'Post-Workout':          [8, 10],
-  'Breakfast':             [9, 12],
-  'Lunch':                 [12, 16],
-  'Dinner':                [19, 22],
+  'Pre-Workout':   [5, 8],
+  'Post-Workout':  [8, 10],
+  'Breakfast':     [9, 12],
+  'Lunch':         [12, 16],
+  'Evening Snack': [16, 19],
+  'Dinner':        [19, 22],
 };
 
 const MEALS_ALL = [
   {
     time: 'Pre-Workout',
-    subtitle: '🌅 Quick energy boost',
+    subtitle: '🌅 Quick energy boost · ~1g protein',
     icon: Sun,
     color: '#facc15',
-    items: ['1 banana 🍌', 'Tea/coffee (optional)'],
-    tip: "Simple fuel for your workout session",
+    items: ['1 banana 🍌', 'Black coffee/tea'],
+    tip: 'Simple fuel for your workout session',
     workoutOnly: true,
+    image: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=600&q=80',
   },
   {
     time: 'Post-Workout',
-    subtitle: '🏋️ Main recovery meal',
+    subtitle: '💪 Recovery meal · ~26g protein',
     icon: Dumbbell,
     color: '#4ade80',
-    items: ['2 boiled eggs 🥚', '2 bread + 1 tbsp peanut butter 🥜', '200 ml milk 🥛'],
+    items: ['3 whole eggs 🥚', '2 bread slices 🍞', '1 tbsp peanut butter 🥜'],
     tip: 'Strong start: protein + calories',
     workoutOnly: true,
+    image: 'https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=600&q=80',
   },
   {
     time: 'Breakfast',
-    subtitle: '🍛 Choose your base',
+    subtitle: '🍳 Choose one · ~8–10g protein',
     icon: Coffee,
     color: '#fb923c',
     items: [
-      '3 idli + sambar',
-      'OR 2 dosa + chutney + sambar', 
-      'OR 50g oats + milk',
-      '+ 1 tbsp peanut butter'
+      '2 dosa + sambar',
+      'OR 3 idli + sambar',
+      'OR Oats',
     ],
-    tip: 'Pick one option + always add peanut butter',
+    tip: 'Pick one option each morning',
     workoutOnly: false,
+    image: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=600&q=80',
   },
   {
     time: 'Lunch',
-    subtitle: '🍗 Biggest meal of the day',
+    subtitle: '🍛 Biggest meal · ~30g protein',
     icon: Utensils,
     color: '#22d3ee',
     items: [
-      '2–2.5 cups rice 🍚', 
-      'Curry of choice',
-      '60g soya chunks (dry weight) ⭐',
-      'Vegetables + curd'
+      'Rice 🍚',
+      '50g dry soya chunks curry 🌱',
+      'Dal/vegetables',
     ],
-    tip: 'This compensates for removed snacks',
+    tip: 'Soya chunks are your main protein source here',
     workoutOnly: false,
+    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80',
+  },
+  {
+    time: 'Evening Snack',
+    subtitle: '☕ Light snack · ~8–10g protein',
+    icon: Apple,
+    color: '#f97316',
+    items: [
+      'Roasted peanuts OR kadala',
+      'Banana',
+    ],
+    tip: 'Keeps energy up before dinner',
+    workoutOnly: false,
+    image: 'https://images.unsplash.com/photo-1536591375667-f9a9a8a3e0e5?w=600&q=80',
   },
   {
     time: 'Dinner',
-    subtitle: '🌙 Evening fuel',
+    subtitle: '🌙 Evening fuel · ~18–22g protein',
     icon: Moon,
     color: '#818cf8',
-    items: ['3 chapati', '2 eggs 🥚', 'Vegetables'],
-    tip: 'Increased portions for better gains',
+    items: [
+      '2–3 chapati OR medium rice',
+      '2 eggs OR fish/chicken',
+    ],
+    tip: 'Finish strong with quality protein',
     workoutOnly: false,
+    image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=600&q=80',
   },
 ];
 
@@ -90,11 +110,12 @@ const RULES = [
 ];
 
 const TIMELINE_TIMES = [
-  { time: 'Pre-Workout',  label: '6:00 AM' },
-  { time: 'Post-Workout', label: '8:00 AM' },
-  { time: 'Breakfast',    label: '9:30 AM' },
-  { time: 'Lunch',        label: '1:00 PM' },
-  { time: 'Dinner',       label: '8:00 PM' },
+  { time: 'Pre-Workout',   label: '6:00 AM' },
+  { time: 'Post-Workout',  label: '8:00 AM' },
+  { time: 'Breakfast',     label: '9:30 AM' },
+  { time: 'Lunch',         label: '1:00 PM' },
+  { time: 'Evening Snack', label: '5:00 PM' },
+  { time: 'Dinner',        label: '8:00 PM' },
 ];
 
 function getCurrentMeal() {
@@ -108,7 +129,7 @@ function getCurrentMeal() {
 // ── Meal Card ──────────────────────────────────────────────────────────────
 function MealCard({ meal, checked, onCheck, defaultOpen }) {
   const [open, setOpen] = useState(defaultOpen);
-  const { icon: Icon, color, time, subtitle, items, tip } = meal;
+  const { icon: Icon, color, time, subtitle, items, tip, image } = meal;
 
   return (
     <div className="rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02]"
@@ -125,9 +146,10 @@ function MealCard({ meal, checked, onCheck, defaultOpen }) {
             boxShadow: checked ? `0 0 15px ${color}50` : 'none' }}>
           {checked && <Check size={14} style={{ color }} />}
         </button>
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110"
-          style={{ background: color + '20', border: `1px solid ${color}40` }}>
-          <Icon size={18} style={{ color }} />
+        {/* meal thumbnail */}
+        <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 transition-all duration-300 group-hover:scale-110"
+          style={{ border: `1px solid ${color}40` }}>
+          <img src={image} alt={time} className="w-full h-full object-cover" loading="lazy" />
         </div>
         <div className="flex-1 min-w-0">
           <p className={`font-bold text-base leading-tight transition-all duration-300 ${checked ? 'line-through opacity-50' : 'text-slate-100 group-hover:text-white'}`}>{time}</p>
@@ -143,10 +165,14 @@ function MealCard({ meal, checked, onCheck, defaultOpen }) {
       {open && (
         <div className="px-5 pb-5">
           <div className="h-px mb-4" style={{ background: `linear-gradient(90deg, ${color}50, transparent)` }} />
+          {/* full-width image */}
+          <div className="rounded-xl overflow-hidden mb-4 bg-black/30">
+            <img src={image} alt={time} className="w-full object-contain max-h-72" loading="lazy" />
+          </div>
           <div className="space-y-3 mb-4">
-            {items.map((item, idx) => (
+            {items.map((item) => (
               <div key={item} className="flex items-start gap-3 text-sm text-slate-200 group/item">
-                <div className="mt-2 w-2 h-2 rounded-full flex-shrink-0 transition-all duration-300 group-hover/item:scale-125" 
+                <div className="mt-2 w-2 h-2 rounded-full flex-shrink-0 transition-all duration-300 group-hover/item:scale-125"
                      style={{ background: color }} />
                 <span className="leading-relaxed group-hover/item:text-white transition-colors duration-300">{item}</span>
               </div>
