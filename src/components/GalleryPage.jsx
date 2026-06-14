@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Images, Upload, X, Loader2, Trash2, ZoomIn, Pencil, Check, MoreVertical, Download, Heart } from "lucide-react";
+import { Images, Upload, X, Loader2, Trash2, ZoomIn, Pencil, Check, MoreVertical, Download, Heart, Video } from "lucide-react";
 import Navbar from "./NavBar";
 import { supabase } from "../supabase";
 
@@ -15,8 +15,8 @@ const TABS = [
 function GalleryTab({ tab }) {
     const [images, setImages]     = useState([]);
     const [uploading, setUploading] = useState(false);
-    const [caption, setCaption]   = useState("");
-    const [preview, setPreview]   = useState(null);
+    const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
+    const [files, setFiles]       = useState([]); // [{ file, localUrl, caption, isVideo }]
     const [lightbox, setLightbox] = useState(null);
     const [editing, setEditing]   = useState(null);
     const [menuOpen, setMenuOpen] = useState(null);
@@ -36,36 +36,60 @@ function GalleryTab({ tab }) {
     }
 
     function onFileChange(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        setPreview({ file, localUrl: URL.createObjectURL(file) });
+        const selected = Array.from(e.target.files);
+        if (!selected.length) return;
+        const newFiles = selected.map(file => ({
+            file,
+            localUrl: URL.createObjectURL(file),
+            caption: "",
+            isVideo: file.type.startsWith("video/"),
+        }));
+        setFiles(prev => [...prev, ...newFiles]);
+        fileRef.current.value = "";
+    }
+
+    function removeFile(idx) {
+        setFiles(prev => { URL.revokeObjectURL(prev[idx].localUrl); return prev.filter((_, i) => i !== idx); });
+    }
+
+    function updateCaption(idx, value) {
+        setFiles(prev => prev.map((f, i) => i === idx ? { ...f, caption: value } : f));
     }
 
     async function handleUpload() {
-        if (!preview) return;
+        if (!files.length) return;
         setUploading(true);
+        setUploadProgress({ done: 0, total: files.length });
         try {
-            const form = new FormData();
-            form.append("file", preview.file);
-            form.append("upload_preset", UPLOAD_PRESET);
-            const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: "POST", body: form });
-            const data = await res.json();
-            if (!data.secure_url) throw new Error("Upload failed");
-            await supabase.from(tab.table).insert({ url: data.secure_url, caption: caption.trim() || null });
-            setPreview(null);
-            setCaption("");
-            fileRef.current.value = "";
+            const rows = await Promise.all(files.map(async ({ file, caption, isVideo }) => {
+                const form = new FormData();
+                form.append("file", file);
+                form.append("upload_preset", UPLOAD_PRESET);
+                const endpoint = isVideo
+                    ? `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`
+                    : `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
+                const res = await fetch(endpoint, { method: "POST", body: form });
+                const data = await res.json();
+                if (!data.secure_url) throw new Error("Upload failed for " + file.name);
+                setUploadProgress(p => ({ ...p, done: p.done + 1 }));
+                return { url: data.secure_url, caption: caption.trim() || null, type: isVideo ? "video" : "image" };
+            }));
+            await supabase.from(tab.table).insert(rows);
+            files.forEach(f => URL.revokeObjectURL(f.localUrl));
+            setFiles([]);
             fetchImages();
         } catch (err) {
             alert("Upload failed: " + err.message);
         } finally {
             setUploading(false);
+            setUploadProgress({ done: 0, total: 0 });
         }
     }
 
     async function handleDelete(id) {
         await supabase.from(tab.table).delete().eq("id", id);
         setImages(prev => prev.filter(img => img.id !== id));
+        if (lightbox?.id === id) setLightbox(null);
     }
 
     async function handleEditSave() {
@@ -93,43 +117,69 @@ function GalleryTab({ tab }) {
             <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
                 className="dash-glass rounded-3xl p-4 sm:p-8 mb-8 sm:mb-12 max-w-2xl mx-auto">
                 <h2 className={`text-lg font-bold text-white mb-6 flex items-center gap-2`}>
-                    <Upload size={18} className={text} /> Upload {tab.label === "Memories" ? "Memory" : "Image"}
+                    <Upload size={18} className={text} /> Upload {tab.label === "Memories" ? "Memories" : "Images"}
                 </h2>
+
+                {/* Drop zone */}
                 <div
                     onClick={() => fileRef.current.click()}
-                    className={`border-2 border-dashed border-slate-700 hover:border-opacity-50 rounded-2xl p-5 sm:p-8 text-center cursor-pointer transition-colors mb-4`}
-                    style={{ borderColor: preview ? `${color}0.4)` : undefined }}
+                    className={`border-2 border-dashed border-slate-700 rounded-2xl p-5 sm:p-8 text-center cursor-pointer transition-colors mb-4`}
+                    style={{ borderColor: files.length ? `${color}0.4)` : undefined }}
                 >
-                    {preview ? (
-                        <img src={preview.localUrl} alt="preview" className="max-h-48 mx-auto rounded-xl object-cover" />
-                    ) : (
-                        <div className="text-slate-500">
-                            <Upload size={32} className="mx-auto mb-2 opacity-40" />
-                            <p className="text-sm">Click to select an image</p>
-                        </div>
-                    )}
+                    <div className="text-slate-500">
+                        <Upload size={32} className="mx-auto mb-2 opacity-40" />
+                        <p className="text-sm">Click to select images or videos</p>
+                        <p className="text-xs opacity-50 mt-1">Multiple files supported</p>
+                    </div>
                 </div>
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
-                <input
-                    type="text"
-                    placeholder="Caption (optional)"
-                    value={caption}
-                    onChange={e => setCaption(e.target.value)}
-                    className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-opacity-50 mb-4"
-                    style={{ '--tw-border-opacity': 0.5 }}
-                />
+                <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={onFileChange} />
+
+                {/* Selected files previews */}
+                {files.length > 0 && (
+                    <div className="space-y-3 mb-4">
+                        {files.map((f, idx) => (
+                            <div key={idx} className="flex gap-3 items-center bg-slate-900/50 rounded-xl p-2 border border-white/5">
+                                <div className="relative flex-shrink-0">
+                                    {f.isVideo ? (
+                                        <div className="w-16 h-16 rounded-lg bg-slate-800 flex items-center justify-center">
+                                            <Video size={24} className={text} />
+                                        </div>
+                                    ) : (
+                                        <img src={f.localUrl} alt="" className="w-16 h-16 rounded-lg object-cover" />
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-slate-400 truncate mb-1.5">{f.file.name}</p>
+                                    <input
+                                        type="text"
+                                        placeholder="Caption (optional)"
+                                        value={f.caption}
+                                        onChange={e => updateCaption(idx, e.target.value)}
+                                        className="w-full bg-slate-800/80 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-600 outline-none"
+                                    />
+                                </div>
+                                <button onClick={() => removeFile(idx)} className="flex-shrink-0 p-1.5 bg-red-500/20 hover:bg-red-500/40 rounded-lg transition-all">
+                                    <X size={14} className="text-red-400" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 <div className="flex gap-3">
                     <button
                         onClick={handleUpload}
-                        disabled={!preview || uploading}
+                        disabled={!files.length || uploading}
                         className={`flex-1 flex items-center justify-center gap-2 ${bg} ${hbg} border ${border} ${text} font-bold py-3 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed`}
                     >
                         {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-                        {uploading ? "Uploading..." : "Upload"}
+                        {uploading
+                            ? `Uploading ${uploadProgress.done}/${uploadProgress.total}...`
+                            : files.length > 1 ? `Upload ${files.length} files` : "Upload"}
                     </button>
-                    {preview && (
+                    {files.length > 0 && !uploading && (
                         <button
-                            onClick={() => { setPreview(null); setCaption(""); fileRef.current.value = ""; }}
+                            onClick={() => { files.forEach(f => URL.revokeObjectURL(f.localUrl)); setFiles([]); }}
                             className="px-4 py-3 rounded-xl border border-white/10 text-slate-400 hover:text-white hover:border-white/20 transition-all"
                         >
                             <X size={16} />
@@ -142,7 +192,7 @@ function GalleryTab({ tab }) {
             {images.length === 0 ? (
                 <div className="text-center text-slate-600 py-20">
                     <Icon size={48} className="mx-auto mb-4 opacity-30" />
-                    <p className="font-mono text-sm">No images yet. Upload your first one.</p>
+                    <p className="font-mono text-sm">No media yet. Upload your first one.</p>
                 </div>
             ) : (
                 <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
@@ -154,12 +204,23 @@ function GalleryTab({ tab }) {
                             transition={{ delay: i * 0.04 }}
                             className="gallery-card dash-glass rounded-2xl overflow-hidden break-inside-avoid group relative"
                         >
-                            <img
-                                src={img.url}
-                                alt={img.caption || "image"}
-                                className="w-full object-cover cursor-pointer"
-                                onClick={() => setLightbox(img)}
-                            />
+                            {img.type === "video" ? (
+                                <video
+                                    src={img.url}
+                                    className="w-full object-cover cursor-pointer"
+                                    onClick={() => setLightbox(img)}
+                                    muted playsInline
+                                    onMouseEnter={e => e.target.play()}
+                                    onMouseLeave={e => { e.target.pause(); e.target.currentTime = 0; }}
+                                />
+                            ) : (
+                                <img
+                                    src={img.url}
+                                    alt={img.caption || "image"}
+                                    className="w-full object-cover cursor-pointer"
+                                    onClick={() => setLightbox(img)}
+                                />
+                            )}
                             {/* Mobile 3-dot */}
                             <button
                                 onClick={e => { e.stopPropagation(); setMenuOpen(menuOpen === img.id ? null : img.id); }}
@@ -217,7 +278,11 @@ function GalleryTab({ tab }) {
                             onClick={e => e.stopPropagation()}
                             className="relative w-full max-w-4xl max-h-[90vh] px-6"
                         >
-                            <img src={lightbox.url} alt={lightbox.caption || ""} className="max-h-[80vh] w-full rounded-2xl object-contain" />
+                            {lightbox.type === "video" ? (
+                                <video src={lightbox.url} className="max-h-[80vh] w-full rounded-2xl object-contain" controls autoPlay />
+                            ) : (
+                                <img src={lightbox.url} alt={lightbox.caption || ""} className="max-h-[80vh] w-full rounded-2xl object-contain" />
+                            )}
                             {lightbox.caption && <p className="text-center text-slate-400 text-sm mt-3">{lightbox.caption}</p>}
                             <button onClick={() => setLightbox(null)} className="absolute top-2 right-0 p-2 bg-slate-800 hover:bg-slate-700 rounded-full border border-white/10 transition-all"><X size={16} className="text-white" /></button>
                             <button onClick={() => handleDownload(lightbox.url, lightbox.caption)} className="absolute top-2 left-0 p-2 bg-emerald-900/80 hover:bg-emerald-800 rounded-full border border-emerald-500/20 transition-all"><Download size={16} className="text-emerald-400" /></button>
