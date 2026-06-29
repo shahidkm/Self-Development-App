@@ -28,17 +28,11 @@ export default function TodoList() {
   const [streak, setStreak]         = useState(() => parseInt(localStorage.getItem('todo_streak') || '0'));
 
   const defaultTodos = [
-    "Build A Good Charecter",
-    "Do Good Things Only",
-    "No Smoking",
-    "Be Metured",
-    "Think 3 Times Before Talking and Doing Anything",
-    "Dont Talk About Myself And Be A Good Listner",
-    "Dont Be Aggressive",
-    "Dont Be Selfish",
-    "Dont Be Toxic",
-    "Self Respect",
-    "Get Well Dressed"
+  "Gym",
+  "Keep Diet Correctly",
+  "Read a Book",
+  "Learn Ai Tools",
+  "Being a Better Person"
   ];
 
   useEffect(() => {
